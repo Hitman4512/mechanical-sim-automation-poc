@@ -1,0 +1,36 @@
+{
+  "name": "CAD Simulation Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cad-pipeline",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "bcce5008-ffda-48e9-9a8a-48c9c7e0649c",
+      "name": "Webhook",
+      "webhookId": "d3694e77-f702-4547-afcb-e4784f73055c"
+    }
+  ],
+  "pinData": {},
+  "connections": {},
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "11f06cbf-1aab-4dbc-8722-384e46b327cf",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d2ff990ff0a99ffc5120a7820ad3f1e5ba862e23906e9d5c88c86926de4fe126"
+  },
+  "nodeGroups": [],
+  "id": "lB73AgeBs6Hpi4QK",
+  "tags": []
+}
