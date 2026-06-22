@@ -1,35 +1,18 @@
 {
-  "name": "CAD Simulation Pipeline",
+  "name": "CAD Simulation Pipeline (Local)",
   "nodes": [
     {
       "parameters": {
-        "httpMethod": "POST",
-        "path": "cad-pipeline",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2.1,
-      "position": [
-        0,
-        0
-      ],
-      "id": "bcce5008-ffda-48e9-9a8a-48c9c7e0649c",
-      "name": "Webhook",
-      "webhookId": "d3694e77-f702-4547-afcb-e4784f73055c"
-    },
-    {
-      "parameters": {
-        "mode": "runOnceForEachItem",
-        "jsCode": "const body = $input.item.json.body;\nconst record = body.Records[0];\n\nconst bucket = record.s3.bucket.name;\nconst key = decodeURIComponent(record.s3.object.key.replace(/\\+/g, ' '));\nconst eventTime = record.eventTime;\n\nconst fileExtension = key.split('.').pop().toLowerCase();\nconst fileType = fileExtension === 'pdf' ? 'pdf' : 'cad';\n\nconst jobId = `job-${Date.now()}`;\n\nreturn {\n  bucket,\n  key,\n  fileType,\n  fileExtension,\n  eventTime,\n  jobId\n};"
+        "jsCode": "const raw = $('List Input Files').first().json.stdout || '';\n\nconst supportedExts = ['.fbx','.usd','.usda','.usdc','.abc','.blend','.obj','.gltf','.glb'];\nconst parts = raw.split('---PDF---');\nconst cadLines = parts[0].split('\\n').map(f => f.trim()).filter(f => f.length > 0);\nconst pdfLines = (parts[1] || '').split('\\n').map(f => f.trim()).filter(f => f.length > 0);\n\nfunction getExt(f) { return f.slice(f.lastIndexOf('.')).toLowerCase(); }\nfunction getBase(f) { return f.slice(0, f.lastIndexOf('.')).toLowerCase(); }\n\nconst cadFiles = cadLines.filter(f => supportedExts.includes(getExt(f)));\nconst pdfFiles = pdfLines.filter(f => getExt(f) === '.pdf');\n\nlet match = null;\nfor (const cad of cadFiles) {\n  const cadBase = getBase(cad);\n  const pdf = pdfFiles.find(p => getBase(p) === cadBase);\n  if (pdf) {\n    match = { pairFound: true, baseName: cadBase, cadFile: cad, pdfFile: pdf };\n    break;\n  }\n}\n\nreturn [{ json: match ?? { pairFound: false, baseName: null, cadFile: null, pdfFile: null } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        208,
-        0
+        160,
+        80
       ],
-      "id": "1e605b75-d30d-4dc4-8374-718e786b0fb4",
-      "name": "Parse S3 Payload"
+      "id": "1696fa33-38b6-45cd-a94b-7c7be26e9182",
+      "name": "Scan Input Folders"
     },
     {
       "parameters": {
@@ -42,13 +25,13 @@
           },
           "conditions": [
             {
-              "id": "dd58c23b-dcca-40a2-bae1-b71c28f0e024",
-              "leftValue": "={{ $json.fileType }}",
-              "rightValue": "pdf",
+              "id": "6eebc7a7-8a00-4ca2-a544-6e97dc442157",
+              "leftValue": "={{ $json.pairFound }}",
+              "rightValue": "true",
               "operator": {
-                "type": "string",
-                "operation": "equals",
-                "name": "filter.operator.equals"
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
               }
             }
           ],
@@ -59,313 +42,252 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        416,
-        0
+        384,
+        80
       ],
-      "id": "e98dcd03-d89f-403e-8b1c-a18d95e44984",
-      "name": "Is PDF or CAD?"
+      "id": "307f46c8-7c26-48ac-9a1c-cd33e3fa5a89",
+      "name": "pair check"
     },
     {
       "parameters": {
-        "mode": "runOnceForEachItem",
-        "jsCode": "const data = $input.item.json;\n\nreturn {\n  jobId: data.jobId,\n  cadBucket: data.bucket,\n  cadKey: data.key,\n  cadReceivedAt: data.eventTime,\n  status: 'cad_received'\n};"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        624,
-        96
-      ],
-      "id": "e4ec3f22-3b5f-444b-8561-f7bd7c6ea806",
-      "name": "Store CAD Info"
-    },
-    {
-      "parameters": {
-        "mode": "runOnceForEachItem",
-        "jsCode": "const data = $input.item.json;\n\nreturn {\n  jobId: data.jobId,\n  pdfBucket: data.bucket,\n  pdfKey: data.key,\n  pdfReceivedAt: data.eventTime,\n  status: 'pdf_received'\n};"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        624,
-        -96
-      ],
-      "id": "bb00c238-dfd6-4a48-aacf-67d223aceb36",
-      "name": "Store PDF Info"
-    },
-    {
-      "parameters": {
-        "jsCode": "const pdfKey = $input.item.json.pdfKey;  \n// e.g., \"inputs/pdf/gearbox_v1.pdf\"\n\nconst baseName = pdfKey.split('/').pop().split('.')[0];  \n// → \"gearbox_v1\"\n\nreturn {\n  baseName,\n  lookInFolder: \"inputs/cad\",\n  originalKey: pdfKey,\n  jobId: $input.item.json.jobId\n};"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        848,
-        -96
-      ],
-      "id": "eb49a2dd-bb19-4ca0-b51e-2149e7d14f68",
-      "name": "Extract baseName (PDF)"
-    },
-    {
-      "parameters": {
-        "jsCode": "const cadKey = $input.item.json.cadKey;\n\nconst baseName = cadKey.split('/').pop().split('.')[0];\n\nreturn {\n  baseName,\n  lookInFolder: \"inputs/pdf\",\n  originalKey: cadKey,\n  jobId: $input.item.json.jobId\n};"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        848,
-        96
-      ],
-      "id": "0d530ac6-ec7c-4960-ba6d-27faea323bf6",
-      "name": "Extract baseName (CAD)"
-    },
-    {
-      "parameters": {
-        "operation": "getAll",
-        "bucketName": "cad-simulation-inputs",
-        "limit": 10,
-        "options": {
-          "folderKey": "={{ $json.searchPrefix }}"
-        }
-      },
-      "type": "n8n-nodes-base.awsS3",
-      "typeVersion": 2,
-      "position": [
-        1056,
-        -96
-      ],
-      "id": "81ab0b7c-11e3-4c71-b24d-06c46e242409",
-      "name": "List CAD Files (Search for Pair)",
-      "credentials": {
-        "aws": {
-          "id": "GndNCw2s9hh8Kino",
-          "name": "AWS (IAM) account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "getAll",
-        "bucketName": "cad-simulation-inputs",
-        "limit": 10,
-        "options": {
-          "folderKey": "={{ $json.searchPrefix }}"
-        }
-      },
-      "type": "n8n-nodes-base.awsS3",
-      "typeVersion": 2,
-      "position": [
-        1056,
-        96
-      ],
-      "id": "99e04022-4caa-4b64-9f1c-1c0392422b20",
-      "name": "List PDF Files (Search for Pair)",
-      "credentials": {
-        "aws": {
-          "id": "GndNCw2s9hh8Kino",
-          "name": "AWS (IAM) account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "mode": "runOnceForEachItem",
-        "jsCode": "const file = $input.item.json;\nconst baseName = $('Extract baseName (PDF)').item.json.baseName;\n\nconst fileKey = file.Key || '';\nconst matches = fileKey.includes(baseName);\n\nreturn matches ? [{ json: { ...file, baseName, pairFound: true } }] : [];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1264,
-        -96
-      ],
-      "id": "b1df0f6c-5091-484c-a069-8acbe5193234",
-      "name": "Filter by baseName Match"
-    },
-    {
-      "parameters": {
-        "mode": "runOnceForEachItem",
-        "jsCode": "const file = $input.item.json;\nconst baseName = $('Extract baseName (PDF)').item.json.baseName;\n\nconst fileKey = file.Key || '';\nconst matches = fileKey.includes(baseName);\n\nreturn matches ? [{ json: { ...file, baseName, pairFound: true } }] : [];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1264,
-        96
-      ],
-      "id": "49c166bc-f8d4-4081-ac5a-6b84190db932",
-      "name": "Filter by baseName Match1"
-    },
-    {
-      "parameters": {
-        "rules": {
-          "values": [
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
             {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 3
-                },
-                "conditions": [
-                  {
-                    "leftValue": "",
-                    "rightValue": "",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    },
-                    "id": "c134c0c0-daee-4114-a04c-19445e510810"
-                  }
-                ],
-                "combinator": "and"
+              "id": "deec7f48-bc8e-4cc9-b3db-71c47109ef55",
+              "leftValue": "={{ $json.pairFound }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
               }
             }
-          ]
+          ],
+          "combinator": "and"
         },
         "options": {}
       },
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 3.4,
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
       "position": [
-        432,
-        -240
+        1264,
+        224
       ],
-      "id": "832c6a6b-d9c2-4ed4-b967-a44380f4d149",
-      "name": "Switch"
+      "id": "3f901226-af40-44fb-a479-799db243b073",
+      "name": "retry pair check"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -288,
+        80
+      ],
+      "id": "259b1abe-b793-4ae4-918d-90dc41ca4380",
+      "name": "Manual trigger"
+    },
+    {
+      "parameters": {
+        "errorMessage": "No matching CAD+PDF pair found after retry. Check C:\\pipeline\\inputs\\cad\\ and C:\\pipeline\\inputs\\pdf\\ for matching baseNames."
+      },
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        1520,
+        352
+      ],
+      "id": "aef4e903-3fc9-444e-a4da-c79917cd09d3",
+      "name": "log pair failure"
+    },
+    {
+      "parameters": {
+        "jsCode": "const now = new Date();\nconst pad = n => String(n).padStart(2,'0');\nconst ts = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;\n\nconst baseName = $input.first().json.baseName;\nconst jobId = `${baseName}_${ts}`;\n\nreturn [{\n  json: {\n    ...$input.first().json,\n    jobId,\n    intermediatesDir: `C:\\\\pipeline\\\\intermediates\\\\${jobId}`,\n    outputsDir: `C:\\\\pipeline\\\\outputs`,\n    logsDir: `C:\\\\pipeline\\\\logs`\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1520,
+        64
+      ],
+      "id": "b049a9c2-3f8d-4350-a00f-9df6ae953b86",
+      "name": "generate jobID"
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        592,
+        224
+      ],
+      "id": "34dc641f-dc5d-4a9b-a33c-ed334f297e9f",
+      "name": "Wait (30s)",
+      "webhookId": "e1fdf7fd-c095-4ac1-959e-8d71c69bb568"
+    },
+    {
+      "parameters": {
+        "command": "cmd /c \"dir /b C:\\pipeline\\inputs\\cad & echo ---PDF--- & dir /b C:\\pipeline\\inputs\\pdf\""
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -64,
+        80
+      ],
+      "id": "2eae65bc-2e3c-4ed2-ac3f-cfd2503bdc28",
+      "name": "List Input Files"
+    },
+    {
+      "parameters": {
+        "command": "cmd /c \"dir /b C:\\pipeline\\inputs\\cad & echo ---PDF--- & dir /b C:\\pipeline\\inputs\\pdf\""
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        816,
+        224
+      ],
+      "id": "79a40817-2bca-453c-bb74-8216e9fcca8a",
+      "name": "List Input Files1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $('List Input Files1').first().json.stdout || '';\n\nconst supportedExts = ['.fbx','.usd','.usda','.usdc','.abc','.blend','.obj','.gltf','.glb'];\nconst parts = raw.split('---PDF---');\nconst cadLines = parts[0].split('\\n').map(f => f.trim()).filter(f => f.length > 0);\nconst pdfLines = (parts[1] || '').split('\\n').map(f => f.trim()).filter(f => f.length > 0);\n\nfunction getExt(f) { return f.slice(f.lastIndexOf('.')).toLowerCase(); }\nfunction getBase(f) { return f.slice(0, f.lastIndexOf('.')).toLowerCase(); }\n\nconst cadFiles = cadLines.filter(f => supportedExts.includes(getExt(f)));\nconst pdfFiles = pdfLines.filter(f => getExt(f) === '.pdf');\n\nlet match = null;\nfor (const cad of cadFiles) {\n  const cadBase = getBase(cad);\n  const pdf = pdfFiles.find(p => getBase(p) === cadBase);\n  if (pdf) {\n    match = { pairFound: true, baseName: cadBase, cadFile: cad, pdfFile: pdf };\n    break;\n  }\n}\n\nreturn [{ json: match ?? { pairFound: false, baseName: null, cadFile: null, pdfFile: null } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        224
+      ],
+      "id": "1109c012-d00f-4439-ad48-d62aea710391",
+      "name": "Scan Input Folders1"
     }
   ],
   "pinData": {},
   "connections": {
-    "Webhook": {
+    "Scan Input Folders": {
       "main": [
         [
           {
-            "node": "Parse S3 Payload",
+            "node": "pair check",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Parse S3 Payload": {
+    "Manual trigger": {
       "main": [
         [
           {
-            "node": "Is PDF or CAD?",
+            "node": "List Input Files",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Is PDF or CAD?": {
+    "pair check": {
       "main": [
         [
           {
-            "node": "Store PDF Info",
+            "node": "generate jobID",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Store CAD Info",
+            "node": "Wait (30s)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Store CAD Info": {
+    "retry pair check": {
       "main": [
         [
           {
-            "node": "Extract baseName (CAD)",
+            "node": "generate jobID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "log pair failure",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Store PDF Info": {
+    "Wait (30s)": {
       "main": [
         [
           {
-            "node": "Extract baseName (PDF)",
+            "node": "List Input Files1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Extract baseName (PDF)": {
+    "List Input Files": {
       "main": [
         [
           {
-            "node": "List CAD Files (Search for Pair)",
+            "node": "Scan Input Folders",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Extract baseName (CAD)": {
+    "List Input Files1": {
       "main": [
         [
           {
-            "node": "List PDF Files (Search for Pair)",
+            "node": "Scan Input Folders1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "List PDF Files (Search for Pair)": {
+    "Scan Input Folders1": {
       "main": [
         [
           {
-            "node": "Filter by baseName Match1",
+            "node": "retry pair check",
             "type": "main",
             "index": 0
           }
         ]
-      ]
-    },
-    "List CAD Files (Search for Pair)": {
-      "main": [
-        [
-          {
-            "node": "Filter by baseName Match",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Filter by baseName Match": {
-      "main": [
-        []
-      ]
-    },
-    "Filter by baseName Match1": {
-      "main": [
-        []
       ]
     }
   },
-  "active": true,
+  "active": false,
   "settings": {
     "executionOrder": "v1",
-    "binaryMode": "separate",
-    "availableInMCP": true
+    "binaryMode": "separate"
   },
-  "versionId": "6f322adf-9a71-43c5-ba06-e72fa96fb2cf",
+  "versionId": "5056e162-f617-4c62-a814-9b14d2f68195",
   "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "d2ff990ff0a99ffc5120a7820ad3f1e5ba862e23906e9d5c88c86926de4fe126"
+    "instanceId": "26aec703d4ef38ac4e911caf870148d44cf371b3b58793422bf8af1f68ed0daf"
   },
   "nodeGroups": [],
-  "id": "lB73AgeBs6Hpi4QK",
+  "id": "yclIKSy4QxFTdntr",
   "tags": []
 }
