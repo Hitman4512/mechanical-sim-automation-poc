@@ -1,20 +1,30 @@
 # Project Progress — AI-Driven Mechanical 3D Simulation Automation (Local POC)
 
-**Last Updated:** June 19, 2026
-**Current Phase:** Phase 0 — Environment & Project Setup (not yet started)
+**Last Updated:** June 22, 2026
+**Current Phase:** Phase 1 — n8n Workflow Build (not yet started)
 
 ---
 
-## Latest Entry — June 19, 2026
+## Latest Entry — June 22, 2026
 
-**What happened:**
-- `FINAL_ARCHITECTURE.md` finalized and locked. This represents a full pivot away from the old cloud-based design (AWS S3/Lambda/IAM, n8n on GitHub Codespace) to a fully local Windows architecture: n8n installed natively via npm, local Blender (headless, Cycles + OptiX denoising) on the RTX A4500 GPU, manual n8n-UI trigger only, no WSL2/Docker.
-- Key decisions locked: supported CAD formats (FBX/USD family/ABC/BLEND/OBJ/glTF/GLB), Python + `jsonschema` for the Phase 4.5 validation gate, 4K-always rendering with Cycles prioritizing quality over speed, Phase 1 pairing logic (scan → if no pair, wait 30s → one retry → log + stop if still unpaired), and strict Iron Rule enforcement (exactly 2 Claude API calls per run, no retries to Claude on failure).
-- Repo structure extended for open-source distribution: added `requirements.txt` (pinned Python deps, currently just `jsonschema`) and confirmed `.env.example` as the reproducibility baseline for anyone cloning the GitHub repo.
-- Old cloud-architecture `project_progress.md` (which was tracking an AWS S3 Filter-node pairing bug) is now fully obsolete — superseded by this local-architecture pivot, not something to resume or fix.
-- This new `project_progress.md` was created to replace the old file, following the locked daily/phase-based logging convention: full detail on the most recent entry, prior entries compressed (not deleted to a bare minimum, just trimmed) as new entries are added, always ending with a forward pointer to the next step in `FINAL_ARCHITECTURE.md`.
-- Clarified working mode going forward: development is on Claude free tier — no Claude Code, no direct MCP execution against n8n. Guidance will be given as exact manual steps (PowerShell commands, n8n node configs, code to paste) for SIDD to execute by hand.
+**What happened — Phase 0 COMPLETE ✅**
 
-**Open items / blockers:** None — pure planning/documentation stage, nothing executed yet.
+All Phase 0 exit criteria met and verified:
 
-**Next planned step (from `FINAL_ARCHITECTURE.md` Section 8):** Begin Phase 0 — Environment & Project Setup. Install Node.js, n8n (`npm install n8n -g`), Python 3.x, Blender 4.x, FFmpeg, and Git on the Windows laptop (Section 8.1–8.2). Initialize the Git repo and GitHub remote with the locked folder structure (Section 6.1, 8.3), create `requirements.txt`, `.env.example`, and `README.md` (Section 8.4–8.7), create the local `C:\pipeline\` runtime folder tree (Section 6.2), and launch n8n locally to confirm it's reachable at `localhost:5678` (Section 8.8). Work through the Phase 0 Exit Criteria checklist (Section 8.9) — note the `.env` real API key item is deferred per standing instruction, not blocking for now.
+- **Software installs verified:** Node.js v24.14.0, npm 11.9.0, n8n 2.26.7, Python 3.12.5, pip 26.0.1, jsonschema 4.26.0, FFmpeg 8.1.1 (winget essentials build), Git 2.45.2, Blender 4.5.10 LTS.
+- **Blender version decision:** Machine has Blender 4.2, 4.5 LTS, and 5.1.2 installed. Selected 4.5 LTS — matches FINAL_ARCHITECTURE.md spec, avoids Blender 5.x breaking changes (legacy Action API removed, dict-like custom property access removed). `BLENDER_EXE_PATH` in `.env.example` points to `C:\Program Files\Blender Foundation\Blender 4.5\blender.exe`.
+- **Blender headless confirmed:** `blender --background --version` returns `Blender 4.5.10 LTS` cleanly.
+- **Repo restructured:** Existing cloud-era GitHub repo (`animation_and_rendering_automation-n8n`) cloned locally, restructured to match FINAL_ARCHITECTURE.md Section 6.1. Removed `config/`, `logs/`, `scripts/lambda/`. Moved `CAD Simulation Pipeline.json` → `n8n-workflows/cad_simulation_pipeline.json`. Added `schemas/`, `docs/`, placeholder scripts, `.env.example`, updated `README.md`, `requirements.txt` (trimmed to `jsonschema>=4.21.0` only), `FINAL_ARCHITECTURE.md`, `project_progress.md`.
+- **Pushed to GitHub:** Commit `d04b7cd` — "Phase 0 - Restructure to local architecture, add scaffold files".
+- **Runtime folder tree created:** `C:\pipeline\inputs\cad\`, `C:\pipeline\inputs\pdf\`, `C:\pipeline\intermediates\`, `C:\pipeline\outputs\`, `C:\pipeline\logs\` — all present, not versioned.
+- **n8n running:** Fresh local instance at `http://localhost:5678` (reset `.n8n` folder to clear stale Codespace credentials). Empty workflow `CAD Simulation Pipeline (Local)` created.
+
+**Open items / blockers:** `.env` real API key deferred per standing instruction — not blocking.
+
+**Next planned step (from `FINAL_ARCHITECTURE.md` Section 9):** Phase 1 — build the n8n workflow. Add nodes in order per Section 18 canonical node graph: Manual Trigger → Scan Input Folders (Code) → Pair Found? (IF) → Wait 30s → Rescan Input Folders (Code) → Pair Found on Retry? (IF) → [Stop and Error: Log Pairing Failure] / [Generate jobId (Code)] → proceed to Phase 2 nodes.
+
+---
+
+## Previous Entry — June 19, 2026 (compressed)
+
+Architecture pivot finalized. `FINAL_ARCHITECTURE.md` locked: fully local Windows pipeline, n8n via npm, Blender 4.x headless Cycles/OptiX, Python + jsonschema validation gate, Iron Rule (exactly 2 Claude API calls), Phase 1 baseName pairing with single 30s retry. Old cloud architecture (AWS S3/Lambda/Codespace n8n) fully decommissioned. Repo structure extended for open-source distribution with `requirements.txt` and `.env.example`. New `project_progress.md` created to replace cloud-era file.
