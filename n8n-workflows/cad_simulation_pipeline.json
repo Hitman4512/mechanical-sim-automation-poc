@@ -9,7 +9,7 @@
       "typeVersion": 2,
       "position": [
         160,
-        80
+        160
       ],
       "id": "1696fa33-38b6-45cd-a94b-7c7be26e9182",
       "name": "Scan Input Folders"
@@ -43,7 +43,7 @@
       "typeVersion": 2.3,
       "position": [
         384,
-        80
+        160
       ],
       "id": "307f46c8-7c26-48ac-9a1c-cd33e3fa5a89",
       "name": "pair check"
@@ -76,8 +76,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        1264,
-        224
+        1280,
+        384
       ],
       "id": "3f901226-af40-44fb-a479-799db243b073",
       "name": "retry pair check"
@@ -88,7 +88,7 @@
       "typeVersion": 1,
       "position": [
         -288,
-        80
+        160
       ],
       "id": "259b1abe-b793-4ae4-918d-90dc41ca4380",
       "name": "Manual trigger"
@@ -101,20 +101,20 @@
       "typeVersion": 1,
       "position": [
         1520,
-        352
+        400
       ],
       "id": "aef4e903-3fc9-444e-a4da-c79917cd09d3",
       "name": "log pair failure"
     },
     {
       "parameters": {
-        "jsCode": "const now = new Date();\nconst pad = n => String(n).padStart(2,'0');\nconst ts = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;\n\nconst baseName = $input.first().json.baseName;\nconst jobId = `${baseName}_${ts}`;\n\nreturn [{\n  json: {\n    ...$input.first().json,\n    jobId,\n    intermediatesDir: `C:\\\\pipeline\\\\intermediates\\\\${jobId}`,\n    outputsDir: `C:\\\\pipeline\\\\outputs`,\n    logsDir: `C:\\\\pipeline\\\\logs`\n  }\n}];"
+        "jsCode": "const now = new Date();\nconst pad = n => String(n).padStart(2,'0');\nconst ts = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;\nconst baseName = $input.first().json.baseName;\nconst jobId = `${baseName}_${ts}`;\nreturn[\n  {\n    json:\n    {\n      ...$input.first().json,\n      jobId,\n      intermediatesDir: `C:\\\\pipeline\\\\intermediates\\\\${jobId}`,\n      outputsDir: `C:\\\\pipeline\\\\outputs`,\n      logsDir: `C:\\\\pipeline\\\\logs`\n    }\n  }\n];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         1520,
-        64
+        144
       ],
       "id": "b049a9c2-3f8d-4350-a00f-9df6ae953b86",
       "name": "generate jobID"
@@ -126,8 +126,8 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        592,
-        224
+        608,
+        384
       ],
       "id": "34dc641f-dc5d-4a9b-a33c-ed334f297e9f",
       "name": "Wait (30s)",
@@ -141,7 +141,7 @@
       "typeVersion": 1,
       "position": [
         -64,
-        80
+        160
       ],
       "id": "2eae65bc-2e3c-4ed2-ac3f-cfd2503bdc28",
       "name": "List Input Files"
@@ -153,8 +153,8 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        816,
-        224
+        832,
+        384
       ],
       "id": "79a40817-2bca-453c-bb74-8216e9fcca8a",
       "name": "List Input Files1"
@@ -166,11 +166,117 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1040,
-        224
+        1056,
+        384
       ],
       "id": "1109c012-d00f-4439-ad48-d62aea710391",
       "name": "Scan Input Folders1"
+    },
+    {
+      "parameters": {
+        "fileSelector": "={{ 'C:\\\\pipeline\\\\inputs\\\\pdf\\\\' + $('generate jobID').first().json.baseName + '.pdf' }}",
+        "options": {
+          "mimeType": "application/pdf",
+          "dataPropertyName": "pdfBinary"
+        }
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        -64,
+        944
+      ],
+      "id": "e91c8055-5560-4ad5-97a2-a40b1e45c18c",
+      "name": "Extract from File (PDF)"
+    },
+    {
+      "parameters": {
+        "command": "=cmd /c mkdir \"{{ $('generate jobID').first().json.intermediatesDir }}\""
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -288,
+        944
+      ],
+      "id": "e2158e81-a4f5-48ec-8ab1-d442c3b09a57",
+      "name": "Create Job Folder"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $('Claude Call 1').first().json.content[0].text;\n\n// Strip markdown fences if present\nconst cleaned = raw.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n\nlet parsed;\ntry {\n  parsed = JSON.parse(cleaned);\n} catch (e) {\n  throw new Error('Claude Call 1 JSON parse failed: ' + e.message + '\\nRaw output: ' + raw);\n}\n\nreturn [{ json: parsed }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        944
+      ],
+      "id": "19164e42-cb39-4b04-b4be-2f41166089d3",
+      "name": "Parse Claude Call 1 Response"
+    },
+    {
+      "parameters": {
+        "jsCode": "const content = JSON.stringify($('Parse Claude Call 1 Response').first().json, null, 2);\nconst buffer = Buffer.from(content, 'utf8');\nconst base64 = buffer.toString('base64');\n\nreturn [{ json: {}, binary: { data: { data: base64, mimeType: 'application/json', fileName: $('generate jobID').first().json.jobId + '-procedural.json' } } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        608,
+        944
+      ],
+      "id": "8a9e18bf-e72e-49ed-957f-755ed9b9ec11",
+      "name": "Prepare Procedural JSON Binary"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "={{ 'C:\\\\pipeline\\\\intermediates\\\\' + $('generate jobID').first().json.jobId + '\\\\' + $('generate jobID').first().json.jobId + '-procedural.json' }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        832,
+        944
+      ],
+      "id": "eb6bf318-5cc5-4bed-a0de-ecf6d8f6bfb5",
+      "name": "Write Procedural JSON"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.CLAUDE_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-6\",\n  \"max_tokens\": 4096,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": [\n        {\n          \"type\": \"document\",\n          \"source\": {\n            \"type\": \"base64\",\n            \"media_type\": \"application/pdf\",\n            \"data\": \"{{ $('Extract from File (PDF)').first().json.pdfBinary }}\"\n          }\n        },\n        {\n          \"type\": \"text\",\n          \"text\": \"You are a mechanical simulation engineer. Extract the procedural assembly steps from this PDF and return ONLY a valid JSON object — no markdown fences, no preamble, no commentary.\\n\\nThe JSON must match this schema exactly:\\n{\\n  \\\"jobId\\\": \\\"{{ $('generate jobID').first().json.jobId }}\\\",\\n  \\\"sourceDocument\\\": \\\"{{ $('generate jobID').first().json.baseName }}.pdf\\\",\\n  \\\"totalDurationSeconds\\\": <number>,\\n  \\\"steps\\\": [\\n    {\\n      \\\"stepId\\\": \\\"step_001\\\",\\n      \\\"order\\\": 1,\\n      \\\"action\\\": \\\"<one of: move|rotate|grip|release|weld|drill|place|wait|approach|retract>\\\",\\n      \\\"targetObject\\\": \\\"<mesh name>\\\",\\n      \\\"toolInteraction\\\": \\\"<string or null>\\\",\\n      \\\"motionParams\\\": {\\n        \\\"startPosition\\\": [x,y,z] or null,\\n        \\\"endPosition\\\": [x,y,z] or null,\\n        \\\"rotationDegrees\\\": [x,y,z] or null,\\n        \\\"speed\\\": <number or null>\\n      },\\n      \\\"durationSeconds\\\": <positive number>,\\n      \\\"dependsOnStepId\\\": \\\"<string or null>\\\"\\n    }\\n  ]\\n}\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        160,
+        944
+      ],
+      "id": "2f350444-82aa-4914-99b2-c75adf03150d",
+      "name": "Claude Call"
     }
   ],
   "pinData": {},
@@ -276,14 +382,81 @@
           }
         ]
       ]
+    },
+    "generate jobID": {
+      "main": [
+        [
+          {
+            "node": "Create Job Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Job Folder": {
+      "main": [
+        [
+          {
+            "node": "Extract from File (PDF)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File (PDF)": {
+      "main": [
+        [
+          {
+            "node": "Claude Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Claude Call 1 Response": {
+      "main": [
+        [
+          {
+            "node": "Prepare Procedural JSON Binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Procedural JSON Binary": {
+      "main": [
+        [
+          {
+            "node": "Write Procedural JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Call": {
+      "main": [
+        [
+          {
+            "node": "Parse Claude Call 1 Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1",
-    "binaryMode": "separate"
+    "binaryMode": "separate",
+    "availableInMCP": false
   },
-  "versionId": "5056e162-f617-4c62-a814-9b14d2f68195",
+  "versionId": "d443a8cd-0265-4b04-8be8-b4a8c80b1a27",
   "meta": {
     "instanceId": "26aec703d4ef38ac4e911caf870148d44cf371b3b58793422bf8af1f68ed0daf"
   },
