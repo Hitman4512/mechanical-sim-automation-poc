@@ -184,7 +184,7 @@
       "typeVersion": 1.1,
       "position": [
         -64,
-        944
+        880
       ],
       "id": "e91c8055-5560-4ad5-97a2-a40b1e45c18c",
       "name": "Extract from File (PDF)"
@@ -197,7 +197,7 @@
       "typeVersion": 1,
       "position": [
         -288,
-        944
+        880
       ],
       "id": "e2158e81-a4f5-48ec-8ab1-d442c3b09a57",
       "name": "Create Job Folder"
@@ -210,7 +210,7 @@
       "typeVersion": 2,
       "position": [
         384,
-        944
+        880
       ],
       "id": "19164e42-cb39-4b04-b4be-2f41166089d3",
       "name": "Parse Claude Call 1 Response"
@@ -223,7 +223,7 @@
       "typeVersion": 2,
       "position": [
         608,
-        944
+        880
       ],
       "id": "8a9e18bf-e72e-49ed-957f-755ed9b9ec11",
       "name": "Prepare Procedural JSON Binary"
@@ -238,7 +238,7 @@
       "typeVersion": 1.1,
       "position": [
         832,
-        944
+        880
       ],
       "id": "eb6bf318-5cc5-4bed-a0de-ecf6d8f6bfb5",
       "name": "Write Procedural JSON"
@@ -273,10 +273,63 @@
       "typeVersion": 4.4,
       "position": [
         160,
-        944
+        880
       ],
       "id": "2f350444-82aa-4914-99b2-c75adf03150d",
       "name": "Claude Call"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    content: [{\n      text: JSON.stringify({\n        jobId: $('generate jobID').first().json.jobId,\n        sourceDocument: $('generate jobID').first().json.baseName + '.pdf',\n        totalDurationSeconds: 10,\n        steps: [{\n          stepId: \"step_001\",\n          order: 1,\n          action: \"move\",\n          targetObject: \"Arm\",\n          toolInteraction: null,\n          motionParams: {\n            startPosition: [0,0,0],\n            endPosition: [1,0,0],\n            rotationDegrees: null,\n            speed: 1.0\n          },\n          durationSeconds: 5,\n          dependsOnStepId: null\n        }]\n      })\n    }]\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        1072
+      ],
+      "id": "87dbde71-ce3f-42b6-a6d2-eb227e3cc21f",
+      "name": "Claude Call 1"
+    },
+    {
+      "parameters": {
+        "command": "={{ $json.blenderCmd }}"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        1536
+      ],
+      "id": "dbfa5448-795d-48be-8ff6-7e38273c4389",
+      "name": "Run Blender Preprocess"
+    },
+    {
+      "parameters": {
+        "jsCode": "const jobId = $('generate jobID').first().json.jobId;\nconst cadFile = $('generate jobID').first().json.cadFile;\nconst intermediatesDir = $('generate jobID').first().json.intermediatesDir;\n\nreturn [{\n  json: {\n    blenderCmd: `\"C:\\\\Program Files\\\\Blender Foundation\\\\Blender 4.5\\\\blender.exe\" --background --python \"C:\\\\Users\\\\HPG9-01\\\\projects\\\\mechanical-sim-automation-poc\\\\scripts\\\\blender_preprocess.py\" -- --input \"C:\\\\pipeline\\\\inputs\\\\cad\\\\${cadFile}\" --output \"${intermediatesDir}\\\\${jobId}-object-manifest.json\"`\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -288,
+        1536
+      ],
+      "id": "d8851ee1-a400-4ed9-9328-8dd5f2a313c5",
+      "name": "Build Blender Command"
+    },
+    {
+      "parameters": {
+        "fileSelector": "={{ $('generate jobID').first().json.intermediatesDir }}\\{{ $('generate jobID').first().json.jobId }}-object-manifest.json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        -288,
+        2144
+      ],
+      "id": "d919939a-9221-4e38-893f-32818d415a60",
+      "name": "Read Object Manifest"
     }
   ],
   "pinData": {},
@@ -409,7 +462,7 @@
       "main": [
         [
           {
-            "node": "Claude Call",
+            "node": "Claude Call 1",
             "type": "main",
             "index": 0
           }
@@ -440,9 +493,47 @@
     },
     "Claude Call": {
       "main": [
+        []
+      ]
+    },
+    "Claude Call 1": {
+      "main": [
         [
           {
             "node": "Parse Claude Call 1 Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Procedural JSON": {
+      "main": [
+        [
+          {
+            "node": "Build Blender Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Blender Preprocess": {
+      "main": [
+        [
+          {
+            "node": "Read Object Manifest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Blender Command": {
+      "main": [
+        [
+          {
+            "node": "Run Blender Preprocess",
             "type": "main",
             "index": 0
           }
@@ -456,7 +547,7 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "d443a8cd-0265-4b04-8be8-b4a8c80b1a27",
+  "versionId": "23a0da19-6225-4efc-b7fe-54d0dda75452",
   "meta": {
     "instanceId": "26aec703d4ef38ac4e911caf870148d44cf371b3b58793422bf8af1f68ed0daf"
   },

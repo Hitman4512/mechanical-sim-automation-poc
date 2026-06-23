@@ -1,44 +1,48 @@
 ﻿# Project Progress — AI-Driven Mechanical 3D Simulation Automation (Local POC)
 
 **Last Updated:** June 23, 2026
-**Current Phase:** Phase 3 — Blender Preprocess (not yet built)
+**Current Phase:** Phase 4 — Simulation Schema Generation (in progress)
 
 ---
 
 ## Latest Entry — June 23, 2026
 
-**What happened — Phase 2 COMPLETE ✅**
+**What happened — Phase 3 COMPLETE ✅, Phase 4 started**
 
-Full node sequence built and tested:
-`generate jobID → Create Job Folder → Extract from File (PDF) → Claude Call 1 → Parse Claude Call 1 Response → Prepare Procedural JSON Binary → Write Procedural JSON`
+Phase 3 node + script built and tested successfully.
 
-**Key decisions & discoveries:**
-- **PDF strategy:** Option B — Read File(s) From Disk node reads PDF as binary (`pdfBinary` field), sent as base64 `document` block directly to Claude API. No text extraction step.
-- **Create Job Folder:** `cmd /c mkdir "{{ $('generate jobID').first().json.intermediatesDir }}"` — uses `intermediatesDir` field from `generate jobID` output. Expression mode required.
-- **Claude Call 1:** HTTP Request node, POST `https://api.anthropic.com/v1/messages`, model `claude-sonnet-4-6`, `max_tokens: 4096`. Headers: `x-api-key` (Expression, `$env.CLAUDE_API_KEY`), `anthropic-version: 2023-06-01`, `content-type: application/json`. Body in Expression mode.
-- **API key:** Not yet received — deferred. `$env.CLAUDE_API_KEY` configured but not populated. Non-blocking.
-- **Mock node:** Claude Call 1 replaced with mock Code node returning hardcoded valid Procedural JSON for testing. Swap back to HTTP Request when API key arrives.
-- **Write pattern:** Write File to Disk node lacks File Content option — workaround: `Prepare Procedural JSON Binary` Code node converts JSON to base64 binary, feeds into `Write Procedural JSON` (Write File to Disk) via `Input Binary Field: data`.
-- **Execute Command expression mode:** Must explicitly toggle Command field to Expression mode — defaults to Fixed, causing literal `{{ }}` folder names.
-- **`intermediatesDir`** field output by `generate jobID` contains full path `C:\pipeline\intermediates\{jobId}` — use this instead of manual concatenation.
+**Phase 3 nodes:**
+- `Build Blender Command` (Code node) — constructs full Blender CLI string, outputs `blenderCmd` field. Required because Execute Command node couldn't resolve `{{ }}` expressions with embedded double-quotes directly.
+- `Run Blender Preprocess` (Execute Command) — Expression mode, command: `{{ $json.blenderCmd }}`. Calls `blender.exe --background --python blender_preprocess.py -- --input ... --output ...`. ✅ Tested and passing.
 
-**All Phase 2 nodes tested and passing ✅**
+**`scripts/blender_preprocess.py` written:** imports CAD file (by extension), applies transforms, extracts mesh hierarchy/bounding boxes/pivots, writes Object Manifest JSON to `intermediatesDir\{jobId}-object-manifest.json`.
 
-**Open items:** Claude Call 1 is currently the mock Code node. Swap to HTTP Request when API key is available.
+**Key discovery:** Execute Command node with embedded double-quotes in expressions fails even in Expression mode — solution is to pre-build the command string in a preceding Code node.
 
-**Next planned step (from `FINAL_ARCHITECTURE.md` Section 11):** Phase 3 — `Run Blender Preprocess` Execute Command node + `blender_preprocess.py` script. Decision pending: build script now or mock and continue node graph first.
+**Phase 4 started:**
+- `Read Object Manifest` (Node 12, Read File to Disk) ✅ done. Path: `{{ $('generate jobID').first().json.intermediatesDir }}\{{ $('generate jobID').first().json.jobId }}-object-manifest.json`
+
+**Open items:** Claude Call 1 still mock Code node — swap to HTTP Request when API key available.
+
+**Next planned step (from `FINAL_ARCHITECTURE.md` Section 12.1):** Node 13 — `Build Phase 4 Prompt` Code node (combines Procedural JSON + Object Manifest JSON into single prompt for Claude Call 2).
+
+---
+
+## Previous Entry — June 23, 2026 (compressed)
+
+Phase 2 COMPLETE. Nodes: `generate jobID → Create Job Folder → Extract from File (PDF) → Claude Call 1 → Parse Claude Call 1 Response → Prepare Procedural JSON Binary → Write Procedural JSON`. PDF sent as base64 document block. Write pattern: binary Code node → Write File to Disk. Claude Call 1 is mock pending API key.
 
 ---
 
 ## Previous Entry — June 22, 2026 (compressed)
 
-Phase 1 COMPLETE. Pairing/retry logic built and tested. Nodes: Manual Trigger → List Input Files → Scan Input Folders → pair check (IF) → Wait 30s → List Input Files1 → Scan Input Folders1 → retry pair check (IF) → [log pair failure] / [generate jobID]. All test cases pass.
+Phase 1 COMPLETE. Pairing/retry logic built and tested. All test cases pass.
 
 ---
 
 ## Previous Entry — June 22, 2026 (compressed)
 
-Phase 0 COMPLETE. All tools verified: Node.js v24.14.0, n8n 2.26.7, Python 3.12.5, jsonschema 4.26.0, FFmpeg 8.1.1, Git 2.45.2, Blender 4.5.10 LTS. Repo pushed to GitHub (commit `d04b7cd`). `C:\pipeline\` runtime tree created.
+Phase 0 COMPLETE. All tools verified. Repo pushed to GitHub. `C:\pipeline\` runtime tree created.
 
 ---
 
