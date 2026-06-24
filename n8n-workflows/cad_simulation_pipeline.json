@@ -108,7 +108,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const now = new Date();\nconst pad = n => String(n).padStart(2,'0');\nconst ts = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;\nconst baseName = $input.first().json.baseName;\nconst jobId = `${baseName}_${ts}`;\nreturn[\n  {\n    json:\n    {\n      ...$input.first().json,\n      jobId,\n      intermediatesDir: `C:\\\\pipeline\\\\intermediates\\\\${jobId}`,\n      outputsDir: `C:\\\\pipeline\\\\outputs`,\n      logsDir: `C:\\\\pipeline\\\\logs`\n    }\n  }\n];"
+        "jsCode": "const now = new Date();\nconst pad = n => String(n).padStart(2,'0');\nconst ts = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;\nconst baseName = $input.first().json.baseName;\nconst jobId = `${baseName}_${ts}`;\nreturn[\n  {\n    json:\n    {\n      ...$input.first().json,\n      jobId,\n      intermediatesDir: `C:\\\\pipeline\\\\intermediates\\\\${jobId}`,\n      outputsDir: `C:\\\\pipeline\\\\outputs`,\n      logsDir: `C:\\\\pipeline\\\\logs`,\n      repoRoot: `C:\\\\Users\\\\HPG9-01\\\\projects\\\\mechanical-sim-automation-poc`\n    }\n  }\n];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -245,6 +245,72 @@
     },
     {
       "parameters": {
+        "jsCode": "return [{\n  json: {\n    content: [{\n      text: JSON.stringify({\n        jobId: $('generate jobID').first().json.jobId,\n        sourceDocument: $('generate jobID').first().json.baseName + '.pdf',\n        totalDurationSeconds: 10,\n        steps: [{\n          stepId: \"step_001\",\n          order: 1,\n          action: \"move\",\n          targetObject: \"Arm\",\n          toolInteraction: null,\n          motionParams: {\n            startPosition: [0,0,0],\n            endPosition: [1,0,0],\n            rotationDegrees: null,\n            speed: 1.0\n          },\n          durationSeconds: 5,\n          dependsOnStepId: null\n        }]\n      })\n    }]\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        880
+      ],
+      "id": "87dbde71-ce3f-42b6-a6d2-eb227e3cc21f",
+      "name": "Claude Call 1"
+    },
+    {
+      "parameters": {
+        "command": "={{ $json.blenderCmd }}"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -64,
+        1536
+      ],
+      "id": "dbfa5448-795d-48be-8ff6-7e38273c4389",
+      "name": "Run Blender Preprocess"
+    },
+    {
+      "parameters": {
+        "jsCode": "const jobId = $('generate jobID').first().json.jobId;\nconst cadFile = $('generate jobID').first().json.cadFile;\nconst intermediatesDir = $('generate jobID').first().json.intermediatesDir;\n\nreturn [{\n  json: {\n    blenderCmd: `\"C:\\\\Program Files\\\\Blender Foundation\\\\Blender 4.5\\\\blender.exe\" --background --python \"C:\\\\Users\\\\HPG9-01\\\\projects\\\\mechanical-sim-automation-poc\\\\scripts\\\\blender_preprocess.py\" -- --input \"C:\\\\pipeline\\\\inputs\\\\cad\\\\${cadFile}\" --output \"${intermediatesDir}\\\\${jobId}-object-manifest.json\"`\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -288,
+        1536
+      ],
+      "id": "d8851ee1-a400-4ed9-9328-8dd5f2a313c5",
+      "name": "Build Blender Command"
+    },
+    {
+      "parameters": {
+        "fileSelector": "={{ $('generate jobID').first().json.intermediatesDir + '\\\\' + $('generate jobID').first().json.jobId + '-object-manifest.json' }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        -288,
+        2144
+      ],
+      "id": "d919939a-9221-4e38-893f-32818d415a60",
+      "name": "Read Object Manifest"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get both JSONs\nconst proceduralJson = $('Parse Claude Call 1 Response').first().json;\nconst objectManifest = $('Read Object Manifest').first().json;\n\nconst prompt = `You are a mechanical simulation expert with all the niche knowledge and a lots of experience with Blender and all and any tools related to it. Given the Procedural JSON (assembly steps extracted from a PDF) and the Object Manifest JSON (mesh names and geometry from a CAD model), perform semantic matching between step targetObjects and mesh names, then generate a complete Simulation Execution JSON.\n\nRULES:\n- Return ONLY valid JSON. No markdown fences, no preamble, no commentary.\n- Match procedural step targetObject names to the closest mesh name in the Object Manifest.\n- frameRate must be 24.\n- All position/rotation arrays must have exactly 3 numbers.\n- frame values must be non-negative integers.\n- totalFrames must equal frameRate × total duration in seconds.\n\nOUTPUT SCHEMA:\n{\n  \"jobId\": \"string\",\n  \"frameRate\": 24,\n  \"totalFrames\": integer,\n  \"objects\": [\n    {\n      \"meshName\": \"string\",\n      \"keyframes\": [\n        { \"frame\": integer, \"position\": [x,y,z], \"rotation\": [rx,ry,rz], \"interpolation\": \"LINEAR\" }\n      ],\n      \"constraints\": []\n    }\n  ],\n  \"cameraPath\": [\n    { \"frame\": integer, \"position\": [x,y,z], \"lookAt\": [x,y,z], \"fov\": 50 }\n  ],\n  \"timingOffsets\": {}\n}\n\nPROCEDURAL JSON:\n${JSON.stringify(proceduralJson, null, 2)}\n\nOBJECT MANIFEST:\n${JSON.stringify(objectManifest, null, 2)}`;\n\nreturn [{ json: { prompt } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -64,
+        2144
+      ],
+      "id": "c9273696-2549-4cb2-9bf7-938af56b0f41",
+      "name": "Build Phase 4 Prompt"
+    },
+    {
+      "parameters": {
         "method": "POST",
         "url": "https://api.anthropic.com/v1/messages",
         "sendHeaders": true,
@@ -273,63 +339,171 @@
       "typeVersion": 4.4,
       "position": [
         160,
-        880
+        688
       ],
       "id": "2f350444-82aa-4914-99b2-c75adf03150d",
-      "name": "Claude Call"
+      "name": "Claude Call #1"
     },
     {
       "parameters": {
-        "jsCode": "return [{\n  json: {\n    content: [{\n      text: JSON.stringify({\n        jobId: $('generate jobID').first().json.jobId,\n        sourceDocument: $('generate jobID').first().json.baseName + '.pdf',\n        totalDurationSeconds: 10,\n        steps: [{\n          stepId: \"step_001\",\n          order: 1,\n          action: \"move\",\n          targetObject: \"Arm\",\n          toolInteraction: null,\n          motionParams: {\n            startPosition: [0,0,0],\n            endPosition: [1,0,0],\n            rotationDegrees: null,\n            speed: 1.0\n          },\n          durationSeconds: 5,\n          dependsOnStepId: null\n        }]\n      })\n    }]\n  }\n}];"
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.CLAUDE_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-6\",\n  \"max_tokens\": 4096,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $('Build Phase 4 Prompt').first().json.prompt }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        160,
+        1952
+      ],
+      "id": "4ecd5d90-3e66-4ee5-a68e-6d317a5c8984",
+      "name": "Claude Call #2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const jobId = $('generate jobID').first().json.jobId;\n\nreturn [{\n  json: {\n    content: [\n      {\n        type: \"text\",\n        text: JSON.stringify({\n          jobId: jobId,\n          frameRate: 24,\n          totalFrames: 240,\n          objects: [\n            {\n              meshName: \"TestCube\",\n              keyframes: [\n                { frame: 0, position: [0, 0, 0], rotation: [0, 0, 0], interpolation: \"LINEAR\" },\n                { frame: 120, position: [0, 0, 0], rotation: [0, 0, 45], interpolation: \"LINEAR\" },\n                { frame: 240, position: [0, 0, 0], rotation: [0, 0, 90], interpolation: \"LINEAR\" }\n              ],\n              constraints: []\n            }\n          ],\n          cameraPath: [\n            { frame: 0, position: [3, 3, 2], lookAt: [0, 0, 0.5], fov: 50 },\n            { frame: 120, position: [2, 4, 2], lookAt: [0, 0, 0.5], fov: 50 },\n            { frame: 240, position: [3, 3, 2], lookAt: [0, 0, 0.5], fov: 50 }\n          ],\n          timingOffsets: {}\n        })\n      }\n    ]\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         160,
-        1072
+        2144
       ],
-      "id": "87dbde71-ce3f-42b6-a6d2-eb227e3cc21f",
-      "name": "Claude Call 1"
+      "id": "0f8ee242-29bc-4faf-be55-41001c659204",
+      "name": "Claude Call 2"
     },
     {
       "parameters": {
-        "command": "={{ $json.blenderCmd }}"
-      },
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
-      "position": [
-        -80,
-        1536
-      ],
-      "id": "dbfa5448-795d-48be-8ff6-7e38273c4389",
-      "name": "Run Blender Preprocess"
-    },
-    {
-      "parameters": {
-        "jsCode": "const jobId = $('generate jobID').first().json.jobId;\nconst cadFile = $('generate jobID').first().json.cadFile;\nconst intermediatesDir = $('generate jobID').first().json.intermediatesDir;\n\nreturn [{\n  json: {\n    blenderCmd: `\"C:\\\\Program Files\\\\Blender Foundation\\\\Blender 4.5\\\\blender.exe\" --background --python \"C:\\\\Users\\\\HPG9-01\\\\projects\\\\mechanical-sim-automation-poc\\\\scripts\\\\blender_preprocess.py\" -- --input \"C:\\\\pipeline\\\\inputs\\\\cad\\\\${cadFile}\" --output \"${intermediatesDir}\\\\${jobId}-object-manifest.json\"`\n  }\n}];"
+        "jsCode": "const response = $('Claude Call 2').first().json;\n\nlet rawText = '';\n\nif (response.content && Array.isArray(response.content)) {\n  rawText = response.content\n    .filter(block => block.type === 'text')\n    .map(block => block.text)\n    .join('');\n} else {\n  throw new Error('Claude Call 2: unexpected response shape — no content array');\n}\n\n// Strip markdown fences if present\nrawText = rawText.replace(/^```json\\s*/i, '').replace(/^```\\s*/i, '').replace(/```\\s*$/i, '').trim();\n\nlet parsed;\ntry {\n  parsed = JSON.parse(rawText);\n} catch (e) {\n  throw new Error('Claude Call 2: JSON parse failed — ' + e.message + ' | Raw: ' + rawText.substring(0, 300));\n}\n\nreturn [{ json: parsed }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -288,
-        1536
+        384,
+        2144
       ],
-      "id": "d8851ee1-a400-4ed9-9328-8dd5f2a313c5",
-      "name": "Build Blender Command"
+      "id": "a119ff8d-78c0-4fea-8efe-1d9ea4ae8824",
+      "name": "Parse Claude Call 2 Response"
     },
     {
       "parameters": {
-        "fileSelector": "={{ $('generate jobID').first().json.intermediatesDir }}\\{{ $('generate jobID').first().json.jobId }}-object-manifest.json",
+        "jsCode": "const parsed = $('Parse Claude Call 2 Response').first().json;\nconst jobId = $('generate jobID').first().json.jobId;\nconst intermediatesDir = $('generate jobID').first().json.intermediatesDir;\n\nconst jsonString = JSON.stringify(parsed, null, 2);\nconst binary = Buffer.from(jsonString, 'utf8').toString('base64');\n\nreturn [{\n  json: {\n    jobId,\n    intermediatesDir,\n    fileName: `${jobId}-simulation-execution.json`\n  },\n  binary: {\n    data: {\n      data: binary,\n      mimeType: 'application/json',\n      fileName: `${jobId}-simulation-execution.json`\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        608,
+        2144
+      ],
+      "id": "19d4bbb5-6a5a-4ef4-9bd9-9c40cefe138e",
+      "name": "Prepare Simulation JSON Binary"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "={{ $json.intermediatesDir + '\\\\' + $json.fileName }}",
         "options": {}
       },
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1.1,
       "position": [
-        -288,
+        832,
         2144
       ],
-      "id": "d919939a-9221-4e38-893f-32818d415a60",
-      "name": "Read Object Manifest"
+      "id": "d68d5949-d97d-4cd0-9ade-600ee17067b8",
+      "name": "Write Simulation Execution JSON"
+    },
+    {
+      "parameters": {
+        "jsCode": "const jobId = $('generate jobID').first().json.jobId;\nconst intermediatesDir = $('generate jobID').first().json.intermediatesDir;\nconst repoRoot = $('generate jobID').first().json.repoRoot;\n\nconst inputFile = `${intermediatesDir}\\\\${jobId}-simulation-execution.json`;\nconst schemaFile = `${repoRoot}\\\\schemas\\\\simulation_execution.schema.json`;\nconst errorLog = `${intermediatesDir}\\\\${jobId}-validation-error.log`;\n\nconst cmd = `python \"${repoRoot}\\\\scripts\\\\validate_schema.py\" --input \"${inputFile}\" --schema \"${schemaFile}\" --errorlog \"${errorLog}\"`;\n\nreturn [{ json: { validationCmd: cmd } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1056,
+        2144
+      ],
+      "id": "29c214cc-fb8a-4d84-bcdf-445d29703b40",
+      "name": "Build Validation Command"
+    },
+    {
+      "parameters": {
+        "command": "={{ $json.validationCmd }}"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        2144
+      ],
+      "id": "5760099d-e5b1-4d57-b3fd-08c88ef66f1d",
+      "name": "Run Schema Validation"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "928844e0-8305-41b9-af95-4d1984d7a07c",
+              "leftValue": "={{ $json.exitCode }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1488,
+        2144
+      ],
+      "id": "6d6b1ba6-5420-43e2-b85a-6a513b1adae5",
+      "name": "Validation Pass check"
+    },
+    {
+      "parameters": {
+        "errorMessage": "=Schema validation failed. Check: {{ $('generate jobID').first().json.intermediatesDir }}\\{{ $('generate jobID').first().json.jobId }}-validation-error.log"
+      },
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        1728,
+        2336
+      ],
+      "id": "9a16e389-22f2-4183-9b00-f208fa5508f9",
+      "name": "Validation Failed"
     }
   ],
   "pinData": {},
@@ -491,11 +665,6 @@
         ]
       ]
     },
-    "Claude Call": {
-      "main": [
-        []
-      ]
-    },
     "Claude Call 1": {
       "main": [
         [
@@ -539,6 +708,116 @@
           }
         ]
       ]
+    },
+    "Read Object Manifest": {
+      "main": [
+        [
+          {
+            "node": "Build Phase 4 Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Call #1": {
+      "main": [
+        []
+      ]
+    },
+    "Claude Call #2": {
+      "main": [
+        []
+      ]
+    },
+    "Build Phase 4 Prompt": {
+      "main": [
+        [
+          {
+            "node": "Claude Call 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Call 2": {
+      "main": [
+        [
+          {
+            "node": "Parse Claude Call 2 Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Claude Call 2 Response": {
+      "main": [
+        [
+          {
+            "node": "Prepare Simulation JSON Binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Simulation JSON Binary": {
+      "main": [
+        [
+          {
+            "node": "Write Simulation Execution JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Simulation Execution JSON": {
+      "main": [
+        [
+          {
+            "node": "Build Validation Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Validation Command": {
+      "main": [
+        [
+          {
+            "node": "Run Schema Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Schema Validation": {
+      "main": [
+        [
+          {
+            "node": "Validation Pass check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validation Pass check": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Validation Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
@@ -547,7 +826,7 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "23a0da19-6225-4efc-b7fe-54d0dda75452",
+  "versionId": "6d11527e-28b1-437b-901f-6209aacd379e",
   "meta": {
     "instanceId": "26aec703d4ef38ac4e911caf870148d44cf371b3b58793422bf8af1f68ed0daf"
   },

@@ -1,36 +1,57 @@
 ﻿# Project Progress — AI-Driven Mechanical 3D Simulation Automation (Local POC)
 
-**Last Updated:** June 23, 2026
-**Current Phase:** Phase 4 — Simulation Schema Generation (in progress)
+**Last Updated:** June 24, 2026
+**Current Phase:** Phase 5 — Blender Simulation Execution (not started)
 
 ---
 
-## Latest Entry — June 23, 2026
+## Latest Entry — June 24, 2026
 
-**What happened — Phase 3 COMPLETE ✅, Phase 4 started**
+**What happened — Phase 4 COMPLETE ✅**
 
-Phase 3 node + script built and tested successfully.
+Full Phase 4 node sequence built, tested, and passing end-to-end.
 
-**Phase 3 nodes:**
-- `Build Blender Command` (Code node) — constructs full Blender CLI string, outputs `blenderCmd` field. Required because Execute Command node couldn't resolve `{{ }}` expressions with embedded double-quotes directly.
-- `Run Blender Preprocess` (Execute Command) — Expression mode, command: `{{ $json.blenderCmd }}`. Calls `blender.exe --background --python blender_preprocess.py -- --input ... --output ...`. ✅ Tested and passing.
+**Nodes completed (in order):**
+- `Read Object Manifest` (Read File(s) From Disk) — path fix: use single concatenated expression `{{ $('generate jobID').first().json.intermediatesDir + '\\' + $('generate jobID').first().json.jobId + '-object-manifest.json' }}` — double `{{ }}` with literal `\` between them breaks n8n's expression parser
+- `Build Phase 4 Prompt` (Code) — combines Procedural JSON + Object Manifest JSON into single prompt string
+- `Claude Call 2` (mock Code node) — returns hardcoded Simulation Execution JSON matching real Claude API response shape (`content: [{ type: "text", text: JSON.stringify({...}) }]`)
+- `Claude Call #2` (HTTP Request) — real node configured (POST `api.anthropic.com/v1/messages`, model `claude-sonnet-4-6`, headers `x-api-key`, `anthropic-version`, `content-type`) but **disconnected** — swap in when API key arrives
+- `Parse Claude Call 2 Response` (Code) — strips markdown fencing, JSON.parse(), throws on failure
+- `Prepare Simulation JSON Binary` (Code) — converts parsed JSON to base64 binary
+- `Write Simulation Execution JSON` (Write File to Disk) — path fix: single concatenated expression `{{ $json.intermediatesDir + '\\' + $json.fileName }}` (same double-expression bug as above)
+- `Build Validation Command` (Code) — constructs full `python validate_schema.py` CLI string using `repoRoot`, `intermediatesDir`, `jobId`
+- `Run Schema Validation` (Execute Command) — `{{ $json.validationCmd }}`
+- `Validation Pass check` (IF, **Number** type) — checks `exitCode == 0`
+- `Validation Failed` (Stop and Error) — FALSE branch
 
-**`scripts/blender_preprocess.py` written:** imports CAD file (by extension), applies transforms, extracts mesh hierarchy/bounding boxes/pivots, writes Object Manifest JSON to `intermediatesDir\{jobId}-object-manifest.json`.
+**Supporting files written:**
+- `scripts/validate_schema.py` — uses `jsonschema` library, exits 0 on valid, 1 on invalid, writes error to `--errorlog`
+- `schemas/simulation_execution.schema.json` — full schema per `FINAL_ARCHITECTURE.md` Section 12.2
 
-**Key discovery:** Execute Command node with embedded double-quotes in expressions fails even in Expression mode — solution is to pre-build the command string in a preceding Code node.
+**Key fixes discovered this session:**
+- `generate jobID` updated to include `repoRoot: C:\Users\HPG9-01\projects\mechanical-sim-automation-poc`
+- Blender 4.5 OBJ import operator changed: `bpy.ops.import_scene.obj` → `bpy.ops.wm.obj_import`
+- Test CAD file `automation_test.obj` (simple cube) + `automation_test.pdf` (4-step procedure) created as valid test inputs replacing dummy Phase 1 files
+- n8n double `{{ }}\{{ }}` expression pattern breaks Write File to Disk and Read File(s) From Disk — **always use single concatenated expression with `+ '\\' +`**
 
-**Phase 4 started:**
-- `Read Object Manifest` (Node 12, Read File to Disk) ✅ done. Path: `{{ $('generate jobID').first().json.intermediatesDir }}\{{ $('generate jobID').first().json.jobId }}-object-manifest.json`
+**Active mocks (both must be swapped when API key arrives):**
+- `Claude Call 1` — mock Code node (Phase 2), real HTTP Request node `Claude Call #1` configured but disconnected
+- `Claude Call 2` — mock Code node (Phase 4), real HTTP Request node `Claude Call #2` configured but disconnected
 
-**Open items:** Claude Call 1 still mock Code node — swap to HTTP Request when API key available.
-
-**Next planned step (from `FINAL_ARCHITECTURE.md` Section 12.1):** Node 13 — `Build Phase 4 Prompt` Code node (combines Procedural JSON + Object Manifest JSON into single prompt for Claude Call 2).
+**Next planned step (from `FINAL_ARCHITECTURE.md` Section 14.1):**
+Phase 5 — `Run Blender Simulation` Execute Command node + `scripts/blender_simulate_render.py`.
 
 ---
 
 ## Previous Entry — June 23, 2026 (compressed)
 
-Phase 2 COMPLETE. Nodes: `generate jobID → Create Job Folder → Extract from File (PDF) → Claude Call 1 → Parse Claude Call 1 Response → Prepare Procedural JSON Binary → Write Procedural JSON`. PDF sent as base64 document block. Write pattern: binary Code node → Write File to Disk. Claude Call 1 is mock pending API key.
+Phase 3 COMPLETE. `Build Blender Command` + `Run Blender Preprocess` nodes. `blender_preprocess.py` written and verified. Object Manifest JSON passes schema. Key learning: Execute Command with embedded double-quotes in expressions fails — pre-build CLI string in Code node, reference as `{{ $json.blenderCmd }}`.
+
+---
+
+## Previous Entry — June 23, 2026 (compressed)
+
+Phase 2 COMPLETE. `generate jobID → Create Job Folder → Extract from File (PDF) → Claude Call 1 → Parse Claude Call 1 Response → Prepare Procedural JSON Binary → Write Procedural JSON`. PDF sent as base64 document block. Write pattern: binary Code node → Write File to Disk.
 
 ---
 

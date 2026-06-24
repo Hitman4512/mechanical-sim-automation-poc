@@ -12,7 +12,8 @@ ext = os.path.splitext(args.input)[1].lower()
 if ext == ".fbx":
     bpy.ops.import_scene.fbx(filepath=args.input)
 elif ext == ".obj":
-    bpy.ops.import_scene.obj(filepath=args.input)
+    #bpy.ops.import_scene.obj(filepath=args.input)
+    bpy.ops.wm.obj_import(filepath=args.input)
 elif ext in (".gltf", ".glb"):
     bpy.ops.import_scene.gltf(filepath=args.input)
 elif ext == ".blend":
