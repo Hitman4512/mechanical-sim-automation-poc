@@ -1,45 +1,89 @@
 ﻿# Project Progress — AI-Driven Mechanical 3D Simulation Automation (Local POC)
 
-**Last Updated:** June 24, 2026
-**Current Phase:** Phase 5 — Blender Simulation Execution (not started)
+**Last Updated:** June 26, 2026
+**Current Phase:** Demo Asset Overnight Render — pipeline fully complete, queued for 720-frame run
 
 ---
 
-## Latest Entry — June 24, 2026
+## Latest Entry — June 26, 2026
 
-**What happened — Phase 4 COMPLETE ✅**
+**What happened — Phases 5, 6, 7, 8 COMPLETE ✅ | Full pipeline end-to-end validated ✅ | Demo asset prepared ✅**
 
-Full Phase 4 node sequence built, tested, and passing end-to-end.
+### Phases 5 + 6 — Blender Simulation + Render (combined)
 
-**Nodes completed (in order):**
-- `Read Object Manifest` (Read File(s) From Disk) — path fix: use single concatenated expression `{{ $('generate jobID').first().json.intermediatesDir + '\\' + $('generate jobID').first().json.jobId + '-object-manifest.json' }}` — double `{{ }}` with literal `\` between them breaks n8n's expression parser
-- `Build Phase 4 Prompt` (Code) — combines Procedural JSON + Object Manifest JSON into single prompt string
-- `Claude Call 2` (mock Code node) — returns hardcoded Simulation Execution JSON matching real Claude API response shape (`content: [{ type: "text", text: JSON.stringify({...}) }]`)
-- `Claude Call #2` (HTTP Request) — real node configured (POST `api.anthropic.com/v1/messages`, model `claude-sonnet-4-6`, headers `x-api-key`, `anthropic-version`, `content-type`) but **disconnected** — swap in when API key arrives
-- `Parse Claude Call 2 Response` (Code) — strips markdown fencing, JSON.parse(), throws on failure
-- `Prepare Simulation JSON Binary` (Code) — converts parsed JSON to base64 binary
-- `Write Simulation Execution JSON` (Write File to Disk) — path fix: single concatenated expression `{{ $json.intermediatesDir + '\\' + $json.fileName }}` (same double-expression bug as above)
-- `Build Validation Command` (Code) — constructs full `python validate_schema.py` CLI string using `repoRoot`, `intermediatesDir`, `jobId`
-- `Run Schema Validation` (Execute Command) — `{{ $json.validationCmd }}`
-- `Validation Pass check` (IF, **Number** type) — checks `exitCode == 0`
-- `Validation Failed` (Stop and Error) — FALSE branch
+Per architecture design, Phases 5 and 6 run inside a single Blender invocation (`blender_simulate_render.py`). One Execute Command node covers both.
 
-**Supporting files written:**
-- `scripts/validate_schema.py` — uses `jsonschema` library, exits 0 on valid, 1 on invalid, writes error to `--errorlog`
-- `schemas/simulation_execution.schema.json` — full schema per `FINAL_ARCHITECTURE.md` Section 12.2
+**Nodes added (in order):**
+- `Build Blender Simulate Command` (Code) — TRUE branch of `Validation Pass check`. Constructs full CLI string. Key fix: `cadFile` from `generate jobID` is filename only (`automation_test.obj`), not full path — extension extracted via `cadFileRaw.split('.').pop()` for multi-format support
+- `Run Blender Simulation + Render` (Execute Command) — `{{ $json.blenderSimCmd }}`
 
-**Key fixes discovered this session:**
-- `generate jobID` updated to include `repoRoot: C:\Users\HPG9-01\projects\mechanical-sim-automation-poc`
-- Blender 4.5 OBJ import operator changed: `bpy.ops.import_scene.obj` → `bpy.ops.wm.obj_import`
-- Test CAD file `automation_test.obj` (simple cube) + `automation_test.pdf` (4-step procedure) created as valid test inputs replacing dummy Phase 1 files
-- n8n double `{{ }}\{{ }}` expression pattern breaks Write File to Disk and Read File(s) From Disk — **always use single concatenated expression with `+ '\\' +`**
+**Script written:** `scripts/blender_simulate_render.py`
+- Handles Phase 5 (keyframe application, constraints, camera setup) + Phase 6 (Cycles render, OptiX, 4K PNG sequence) in one script
+- Key functions: `import_cad()` (multi-format), `apply_keyframes()`, `apply_constraints()`, `setup_camera()` (lookAt via mathutils quaternion), `add_default_lighting()` (3-point sun), `configure_render()` (Cycles + OptiX fallback chain → CUDA → CPU), `setup_materials()` (Principled BSDF per-object)
+- Scale keyframe support added: `kf.get("scale")` → `obj.scale` + `keyframe_insert("scale")`
+- Output: `C:\pipeline\intermediates\{jobId}\frames\frame_0000.png` … `frame_NNNN.png`
 
-**Active mocks (both must be swapped when API key arrives):**
-- `Claude Call 1` — mock Code node (Phase 2), real HTTP Request node `Claude Call #1` configured but disconnected
-- `Claude Call 2` — mock Code node (Phase 4), real HTTP Request node `Claude Call #2` configured but disconnected
+**Test run:** `automation_test.obj` (TestCube), 10 frames, 4K Cycles. All 11 frames rendered successfully (`frame_0000.png` → `frame_0010.png`). Node green. ✅
 
-**Next planned step (from `FINAL_ARCHITECTURE.md` Section 14.1):**
-Phase 5 — `Run Blender Simulation` Execute Command node + `scripts/blender_simulate_render.py`.
+### Phase 7 — FFmpeg Video Assembly
+
+**Nodes added:**
+- `Build FFmpeg Command` (Code) — constructs ffmpeg CLI string (`libx264, crf 18, slow preset, yuv420p`)
+- `Assemble Video` (Execute Command) — `{{ $json.ffmpegCmd }}`
+
+Output: `C:\pipeline\outputs\{jobId}.mp4`. Verified working with 10-frame test (0.4s video). ✅
+
+### Phase 8 — Completion Report
+
+**Nodes added:**
+- `Build Completion Report` (Code) — assembles report JSON (jobId, status, endTime, claudeCallCount: 2, outputVideoPath)
+- `Prepare Report Binary` (Code) — converts to base64
+- `Write Completion Report` (Write File to Disk) — `C:\pipeline\logs\{jobId}-report.json`
+
+Report confirmed written to `C:\pipeline\logs\`. ✅
+
+---
+
+### Demo Asset — Prepared for Overnight Render
+
+**Demo asset designed:** `demo_pyramid.obj` (multi-part) + `demo_pyramid.pdf` (13-step procedure)
+
+**OBJ objects:** `TriPyramid`, `SqPyramid`, `Label1`, `Label2`, `Label3`, `Label4`
+
+**Animation sequence (720 frames = 30s @ 24fps):**
+
+| Frames | Action |
+|---|---|
+| 0–72 | Camera zoom-in from (0,−10,3) → (0,−6,2) |
+| 72–240 | TriPyramid 6DOF motion (translate ±0.5 X/Y/Z, rotate ±30° X/Y/Z), returns to origin |
+| 240–312 | Transition: TriPyramid scale 1→0, SqPyramid scale 0→1 |
+| 312–432 | Label1–4 appear sequentially (scale 0→1 at frames 360, 390, 412, 432) |
+| 432–552 | SqPyramid + Labels rotate 360° anti-clockwise around Z axis |
+| 552–600 | Camera moves position 1 → position 2 (45° elevation) |
+| 600–720 | Camera orbits pyramid 3× CCW (41 keyframes, 3-frame intervals, 27°/step) |
+
+**Mock `Claude Call 2` updated:** full 720-frame JSON with `scale` keyframes for transition + label appearance + orbit keyframes generated via loop (41 points, smooth orbit)
+
+**`blender_simulate_render.py` updated:** scale keyframe support + `setup_materials()` (Principled BSDF per-object: TriPyramid silver, SqPyramid gold, Labels red/green/blue/yellow)
+
+**Pending (overnight):**
+- Place `demo_pyramid.obj` → `C:\pipeline\inputs\cad\`
+- Place `demo_pyramid.pdf` → `C:\pipeline\inputs\pdf\`
+- Remove `automation_test.*` from inputs
+- Run workflow → estimated 15–24 hours on RTX A4500 Laptop GPU
+
+**Active mocks (unchanged — swap when API key arrives):**
+- `Claude Call 1` — mock Code node; real HTTP Request node `Claude Call #1` configured but disconnected
+- `Claude Call 2` — mock Code node (updated to 720-frame demo JSON); real HTTP Request node `Claude Call #2` configured but disconnected
+
+**Next planned step:**
+Swap mock Claude Call 1 and Claude Call 2 Code nodes → real HTTP Request nodes once Anthropic API key arrives. Populate `.env` with `CLAUDE_API_KEY`. Run full end-to-end pipeline with real Claude API calls.
+
+---
+
+## Previous Entry — June 24, 2026 (compressed)
+
+Phase 4 COMPLETE. `Read Object Manifest → Build Phase 4 Prompt → Claude Call 2 (mock) → Parse → Prepare Binary → Write Simulation Execution JSON → Build Validation Command → Run Schema Validation → Validation Pass check → Validation Failed (FALSE branch)`. Schema validation passes. Key fix: double `{{ }}\{{ }}` expression breaks Write/Read File nodes — always use single concatenated expression.
 
 ---
 
