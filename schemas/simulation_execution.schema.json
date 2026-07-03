@@ -28,6 +28,18 @@
                 "interpolation": { "type": "string", "enum": ["LINEAR", "BEZIER", "CONSTANT"] }
               }
             }
+          },
+          "constraints": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["type", "targetMesh"],
+              "properties": {
+                "type": { "type": "string", "enum": ["parent", "track_to", "limit_location", "limit_rotation", "child_of"] },
+                "targetMesh": { "type": "string" },
+                "params": { "type": "object" }
+              }
+            }
           }
         }
       }
