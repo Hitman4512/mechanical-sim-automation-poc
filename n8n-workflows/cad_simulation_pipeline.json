@@ -8,10 +8,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        160,
-        160
+        -1344,
+        16
       ],
-      "id": "1696fa33-38b6-45cd-a94b-7c7be26e9182",
+      "id": "d2a40839-e24e-432b-9bcc-ab6f75304022",
       "name": "Scan Input Folders"
     },
     {
@@ -42,10 +42,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        384,
-        160
+        -1120,
+        16
       ],
-      "id": "307f46c8-7c26-48ac-9a1c-cd33e3fa5a89",
+      "id": "64fd4d6d-ae8d-4ffd-8cd8-34856a73e70a",
       "name": "pair check"
     },
     {
@@ -76,10 +76,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        1280,
-        384
+        -224,
+        240
       ],
-      "id": "3f901226-af40-44fb-a479-799db243b073",
+      "id": "ba18bce5-4e7f-47c4-a40c-53aee39f0e8a",
       "name": "retry pair check"
     },
     {
@@ -87,10 +87,10 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        -288,
-        160
+        -1792,
+        16
       ],
-      "id": "259b1abe-b793-4ae4-918d-90dc41ca4380",
+      "id": "f13055eb-cca8-4cb0-b8b7-75eed0145830",
       "name": "Manual trigger"
     },
     {
@@ -100,10 +100,10 @@
       "type": "n8n-nodes-base.stopAndError",
       "typeVersion": 1,
       "position": [
-        1504,
-        400
+        0,
+        256
       ],
-      "id": "aef4e903-3fc9-444e-a4da-c79917cd09d3",
+      "id": "3a0642a8-b524-4cd7-8e36-8134b0b0a738",
       "name": "log pair failure"
     },
     {
@@ -113,10 +113,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1504,
-        144
+        0,
+        0
       ],
-      "id": "b049a9c2-3f8d-4350-a00f-9df6ae953b86",
+      "id": "e1f15741-5a1c-4f69-b7a4-b002e6666c60",
       "name": "generate jobID"
     },
     {
@@ -126,10 +126,10 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        608,
-        384
+        -896,
+        240
       ],
-      "id": "34dc641f-dc5d-4a9b-a33c-ed334f297e9f",
+      "id": "b9594f69-7dcc-4543-b089-74a385342fd8",
       "name": "Wait (30s)",
       "webhookId": "e1fdf7fd-c095-4ac1-959e-8d71c69bb568"
     },
@@ -140,10 +140,10 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        -64,
-        160
+        -1568,
+        16
       ],
-      "id": "2eae65bc-2e3c-4ed2-ac3f-cfd2503bdc28",
+      "id": "dbdf52ca-194d-4a75-aca0-b13d3e013b6f",
       "name": "List Input Files"
     },
     {
@@ -153,10 +153,10 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        832,
-        384
+        -672,
+        240
       ],
-      "id": "79a40817-2bca-453c-bb74-8216e9fcca8a",
+      "id": "9b25bbce-bfaa-425a-82a7-d13f2a662e00",
       "name": "List Input Files1"
     },
     {
@@ -166,10 +166,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1056,
-        384
+        -448,
+        240
       ],
-      "id": "1109c012-d00f-4439-ad48-d62aea710391",
+      "id": "ac599c5d-83b4-40c6-8338-5d2a8dc61521",
       "name": "Scan Input Folders1"
     },
     {
@@ -183,10 +183,10 @@
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1.1,
       "position": [
-        -64,
-        832
+        -1568,
+        688
       ],
-      "id": "e91c8055-5560-4ad5-97a2-a40b1e45c18c",
+      "id": "1788a6c0-1c3d-46b8-817f-01eadcadc7b2",
       "name": "Extract from File (PDF)"
     },
     {
@@ -196,23 +196,23 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        -288,
-        832
+        -1792,
+        688
       ],
-      "id": "e2158e81-a4f5-48ec-8ab1-d442c3b09a57",
+      "id": "45fd2edd-a82d-494a-a0ec-f1f2870dabc6",
       "name": "Create Job Folder"
     },
     {
       "parameters": {
-        "jsCode": "const raw = $('Claude Call 1').first().json.content[0].text;\n\n// Strip markdown fences if present\nconst cleaned = raw.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n\nlet parsed;\ntry {\n  parsed = JSON.parse(cleaned);\n} catch (e) {\n  throw new Error('Claude Call 1 JSON parse failed: ' + e.message + '\\nRaw output: ' + raw);\n}\n\nreturn [{ json: parsed }];"
+        "jsCode": "const raw = $('groq call1').first().json.choices[0].message.content;\n\n// Strip markdown fences if present\nconst cleaned = raw.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n\nlet parsed;\ntry {\n  parsed = JSON.parse(cleaned);\n} catch (e) {\n  throw new Error('Claude Call 1 JSON parse failed: ' + e.message + '\\nRaw output: ' + raw);\n}\n\nreturn [{ json: parsed }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        384,
-        832
+        -1120,
+        688
       ],
-      "id": "19164e42-cb39-4b04-b4be-2f41166089d3",
+      "id": "9f0e0ab8-0c8f-43f5-910e-93bc154e0370",
       "name": "Parse Claude Call 1 Response"
     },
     {
@@ -222,10 +222,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        608,
-        832
+        -896,
+        688
       ],
-      "id": "8a9e18bf-e72e-49ed-957f-755ed9b9ec11",
+      "id": "e4d27fcd-0ebf-46e5-978d-d4ce72505da2",
       "name": "Prepare Procedural JSON Binary"
     },
     {
@@ -237,23 +237,23 @@
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1.1,
       "position": [
-        832,
-        832
+        -672,
+        688
       ],
-      "id": "eb6bf318-5cc5-4bed-a0de-ecf6d8f6bfb5",
+      "id": "00892648-edbd-4c1f-8532-afc97928406f",
       "name": "Write Procedural JSON"
     },
     {
       "parameters": {
-        "jsCode": "return [{\n  json: {\n    content: [{\n      text: JSON.stringify({\n        jobId: $('generate jobID').first().json.jobId,\n        sourceDocument: $('generate jobID').first().json.baseName + '.pdf',\n        totalDurationSeconds: 10,\n        steps: [{\n          stepId: \"step_001\",\n          order: 1,\n          action: \"move\",\n          targetObject: \"Arm\",\n          toolInteraction: null,\n          motionParams: {\n            startPosition: [0,0,0],\n            endPosition: [1,0,0],\n            rotationDegrees: null,\n            speed: 1.0\n          },\n          durationSeconds: 5,\n          dependsOnStepId: null\n        }]\n      })\n    }]\n  }\n}];"
+        "jsCode": "const jobId = $('generate jobID').first().json.jobId;\n\nconst parsed = {\n  jobId: jobId,\n  sourceDocument: \"10M_THICKENER.pdf\",\n  totalDurationSeconds: 10,\n  steps: [\n    {\n      stepId: \"step1\",\n      order: 1,\n      action: \"approach\",\n      targetObject: \"Thickener\",\n      toolInteraction: null,\n      motionParams: {\n        startPosition: [10, -10, 5],\n        endPosition: [2, -2, 1.5],\n        rotationDegrees: null,\n        speed: null\n      },\n      durationSeconds: 4,\n      dependsOnStepId: null\n    },\n    {\n      stepId: \"step2\",\n      order: 2,\n      action: \"rotate\",\n      targetObject: \"Thickener\",\n      toolInteraction: null,\n      motionParams: {\n        startPosition: null,\n        endPosition: null,\n        rotationDegrees: [0, 0, 360],\n        speed: null\n      },\n      durationSeconds: 6,\n      dependsOnStepId: \"step1\"\n    }\n  ]\n};\n\nreturn [{ json: parsed }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        160,
-        832
+        -1344,
+        352
       ],
-      "id": "87dbde71-ce3f-42b6-a6d2-eb227e3cc21f",
+      "id": "a8c2bdb5-639b-47e5-b513-47d9a7c34e2e",
       "name": "Claude Call 1"
     },
     {
@@ -263,23 +263,23 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        -64,
-        1328
+        -1568,
+        1184
       ],
-      "id": "dbfa5448-795d-48be-8ff6-7e38273c4389",
+      "id": "b283e0c4-6c82-4410-9b17-d61c06cf07a1",
       "name": "Run Blender Preprocess"
     },
     {
       "parameters": {
-        "jsCode": "const jobId = $('generate jobID').first().json.jobId;\nconst cadFile = $('generate jobID').first().json.cadFile;\nconst intermediatesDir = $('generate jobID').first().json.intermediatesDir;\n\nreturn [{\n  json: {\n    blenderCmd: `\"C:\\\\Program Files\\\\Blender Foundation\\\\Blender 4.5\\\\blender.exe\" --background --python \"C:\\\\Users\\\\HPG9-01\\\\projects\\\\mechanical-sim-automation-poc\\\\scripts\\\\blender_preprocess.py\" -- --input \"C:\\\\pipeline\\\\inputs\\\\cad\\\\${cadFile}\" --output \"${intermediatesDir}\\\\${jobId}-object-manifest.json\"`\n  }\n}];"
+        "jsCode": "const jobId = $('generate jobID').first().json.jobId;\nconst cadFile = $('generate jobID').first().json.cadFile;\nconst intermediatesDir = $('generate jobID').first().json.intermediatesDir;\nconst logPath = `C:\\\\pipeline\\\\logs\\\\${jobId}-blender-preprocess.log`;\nreturn [{\n  json: {\n    blenderCmd: `cmd /c \"\"C:\\\\Program Files\\\\Blender Foundation\\\\Blender 4.5\\\\blender.exe\" --background --python \"C:\\\\Users\\\\HPG9-01\\\\projects\\\\mechanical-sim-automation-poc\\\\scripts\\\\blender_preprocess.py\" -- --input \"C:\\\\pipeline\\\\inputs\\\\cad\\\\${cadFile}\" --output \"${intermediatesDir}\\\\${jobId}-object-manifest.json\" >> \"${logPath}\" 2>&1 & echo PREPROCESS_DONE\"`\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -288,
-        1328
+        -1792,
+        1184
       ],
-      "id": "d8851ee1-a400-4ed9-9328-8dd5f2a313c5",
+      "id": "fcfda032-1cf1-45e9-b916-86861ce8b61f",
       "name": "Build Blender Command"
     },
     {
@@ -290,10 +290,10 @@
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1.1,
       "position": [
-        -288,
-        1808
+        -1792,
+        1664
       ],
-      "id": "d919939a-9221-4e38-893f-32818d415a60",
+      "id": "f387e343-b2d2-47f0-b89a-465a119d640f",
       "name": "Read Object Manifest"
     },
     {
@@ -303,10 +303,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -64,
-        1808
+        -1568,
+        1664
       ],
-      "id": "c9273696-2549-4cb2-9bf7-938af56b0f41",
+      "id": "e6f9cbe2-1190-4eb4-903f-aa4947d2a90d",
       "name": "Build Phase 4 Prompt"
     },
     {
@@ -338,10 +338,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        160,
-        640
+        -1344,
+        512
       ],
-      "id": "2f350444-82aa-4914-99b2-c75adf03150d",
+      "id": "b8be8fda-0dec-4a21-9d80-507f5745f717",
       "name": "Claude Call #1"
     },
     {
@@ -373,36 +373,36 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        160,
-        1616
+        -1344,
+        1488
       ],
-      "id": "4ecd5d90-3e66-4ee5-a68e-6d317a5c8984",
+      "id": "c6ce5b0d-bedb-4cba-82c7-784660ee9bb2",
       "name": "Claude Call #2"
     },
     {
       "parameters": {
-        "jsCode": "const jobId = $('generate jobID').first().json.jobId;\n\n// ── Orbit: 3 CCW rotations, frames 600-720 (40 steps × 3 frames = 120 frames)\nconst orbitKF = [];\nconst orbitR = 5.0, orbitZ = 4.0, numSteps = 40;\nfor (let i = 0; i <= numSteps; i++) {\n  const frame = 600 + i * 3;\n  const rad = (-90 + i * (1080 / numSteps)) * Math.PI / 180;\n  orbitKF.push({\n    frame,\n    position: [parseFloat((orbitR * Math.cos(rad)).toFixed(3)),\n               parseFloat((orbitR * Math.sin(rad)).toFixed(3)),\n               orbitZ],\n    lookAt: [0, 0, 1],\n    fov: 50\n  });\n}\n\nreturn [{\n  json: {\n    content: [{\n      type: \"text\",\n      text: JSON.stringify({\n        jobId,\n        frameRate: 24,\n        totalFrames: 720,\n        objects: [\n          {\n            meshName: \"TriPyramid\",\n            keyframes: [\n              { frame: 0,   position: [0,0,0],       rotation: [0,0,0],    scale: [1,1,1], interpolation: \"LINEAR\" },\n              { frame: 72,  position: [0,0,0],       rotation: [0,0,0],    scale: [1,1,1], interpolation: \"LINEAR\" },\n              { frame: 120, position: [0.5,0,0],     rotation: [15,0,0],   scale: [1,1,1], interpolation: \"LINEAR\" },\n              { frame: 144, position: [0.5,0.3,0.2], rotation: [15,15,0],  scale: [1,1,1], interpolation: \"LINEAR\" },\n              { frame: 192, position: [-0.3,0.2,0.3],rotation: [-10,20,30],scale: [1,1,1], interpolation: \"LINEAR\" },\n              { frame: 240, position: [0,0,0],       rotation: [0,0,0],    scale: [1,1,1], interpolation: \"LINEAR\" },\n              { frame: 312, position: [0,0,0],       rotation: [0,0,0],    scale: [0,0,0], interpolation: \"LINEAR\" }\n            ],\n            constraints: []\n          },\n          {\n            meshName: \"SqPyramid\",\n            keyframes: [\n              { frame: 0,   position: [0,0,0], rotation: [0,0,0],   scale: [0,0,0], interpolation: \"LINEAR\" },\n              { frame: 240, position: [0,0,0], rotation: [0,0,0],   scale: [0,0,0], interpolation: \"LINEAR\" },\n              { frame: 312, position: [0,0,0], rotation: [0,0,0],   scale: [1,1,1], interpolation: \"LINEAR\" },\n              { frame: 432, position: [0,0,0], rotation: [0,0,0],   scale: [1,1,1], interpolation: \"LINEAR\" },\n              { frame: 552, position: [0,0,0], rotation: [0,0,360], scale: [1,1,1], interpolation: \"LINEAR\" },\n              { frame: 720, position: [0,0,0], rotation: [0,0,360], scale: [1,1,1], interpolation: \"LINEAR\" }\n            ],\n            constraints: []\n          },\n          {\n            meshName: \"Label1\",\n            keyframes: [\n              { frame: 0,   position: [0,0,0], rotation: [0,0,0],   scale: [0,0,0], interpolation: \"LINEAR\" },\n              { frame: 312, position: [0,0,0], rotation: [0,0,0],   scale: [0,0,0], interpolation: \"LINEAR\" },\n              { frame: 360, position: [0,0,0], rotation: [0,0,0],   scale: [1,1,1], interpolation: \"LINEAR\" },\n              { frame: 432, position: [0,0,0], rotation: [0,0,0],   scale: [1,1,1], interpolation: \"LINEAR\" },\n              { frame: 552, position: [0,0,0], rotation: [0,0,360], scale: [1,1,1], interpolation: \"LINEAR\" },\n              { frame: 720, position: [0,0,0], rotation: [0,0,360], scale: [1,1,1], interpolation: \"LINEAR\" }\n            ],\n            constraints: []\n          },\n          {\n            meshName: \"Label2\",\n            keyframes: [\n              { frame: 0,   position: [0,0,0], rotation: [0,0,0],   scale: [0,0,0], interpolation: \"LINEAR\" },\n              { frame: 360, position: [0,0,0], rotation: [0,0,0],   scale: [0,0,0], interpolation: \"LINEAR\" },\n              { frame: 390, position: [0,0,0], rotation: [0,0,0],   scale: [1,1,1], interpolation: \"LINEAR\" },\n              { frame: 432, position: [0,0,0], rotation: [0,0,0],   scale: [1,1,1], interpolation: \"LINEAR\" },\n              { frame: 552, position: [0,0,0], rotation: [0,0,360], scale: [1,1,1], interpolation: \"LINEAR\" },\n              { frame: 720, position: [0,0,0], rotation: [0,0,360], scale: [1,1,1], interpolation: \"LINEAR\" }\n            ],\n            constraints: []\n          },\n          {\n            meshName: \"Label3\",\n            keyframes: [\n              { frame: 0,   position: [0,0,0], rotation: [0,0,0],   scale: [0,0,0], interpolation: \"LINEAR\" },\n              { frame: 390, position: [0,0,0], rotation: [0,0,0],   scale: [0,0,0], interpolation: \"LINEAR\" },\n              { frame: 412, position: [0,0,0], rotation: [0,0,0],   scale: [1,1,1], interpolation: \"LINEAR\" },\n              { frame: 432, position: [0,0,0], rotation: [0,0,0],   scale: [1,1,1], interpolation: \"LINEAR\" },\n              { frame: 552, position: [0,0,0], rotation: [0,0,360], scale: [1,1,1], interpolation: \"LINEAR\" },\n              { frame: 720, position: [0,0,0], rotation: [0,0,360], scale: [1,1,1], interpolation: \"LINEAR\" }\n            ],\n            constraints: []\n          },\n          {\n            meshName: \"Label4\",\n            keyframes: [\n              { frame: 0,   position: [0,0,0], rotation: [0,0,0],   scale: [0,0,0], interpolation: \"LINEAR\" },\n              { frame: 412, position: [0,0,0], rotation: [0,0,0],   scale: [0,0,0], interpolation: \"LINEAR\" },\n              { frame: 432, position: [0,0,0], rotation: [0,0,0],   scale: [1,1,1], interpolation: \"LINEAR\" },\n              { frame: 552, position: [0,0,0], rotation: [0,0,360], scale: [1,1,1], interpolation: \"LINEAR\" },\n              { frame: 720, position: [0,0,0], rotation: [0,0,360], scale: [1,1,1], interpolation: \"LINEAR\" }\n            ],\n            constraints: []\n          }\n        ],\n        cameraPath: [\n          { frame: 0,   position: [0, -10, 3], lookAt: [0, 0, 1], fov: 50 },\n          { frame: 72,  position: [0,  -6, 2], lookAt: [0, 0, 1], fov: 50 },\n          { frame: 552, position: [0,  -6, 2], lookAt: [0, 0, 1], fov: 50 },\n          ...orbitKF\n        ],\n        timingOffsets: {}\n      })\n    }]\n  }\n}];"
+        "jsCode": "const jobId = $('generate jobID').first().json.jobId;\n\nconst parsed = {\n  jobId: jobId,\n  frameRate: 24,\n  totalFrames: 240,\n  objects: [\n    {\n      meshName: \"Thickener\",\n      keyframes: [\n        { frame: 0, position: [0, 0, 0], rotation: [0, 0, 0], interpolation: \"LINEAR\" },\n        { frame: 96, position: [0, 0, 0], rotation: [0, 0, 0], interpolation: \"LINEAR\" },\n        { frame: 240, position: [0, 0, 0], rotation: [0, 0, 360], interpolation: \"LINEAR\" }\n      ],\n      constraints: []\n    }\n  ],\n  cameraPath: [\n    { frame: 0, position: [10, -10, 5], lookAt: [0, 0, 0], fov: 50 },\n    { frame: 96, position: [2, -2, 1.5], lookAt: [0, 0, 0], fov: 50 },\n    { frame: 240, position: [2, -2, 1.5], lookAt: [0, 0, 0], fov: 50 }\n  ],\n  timingOffsets: {}\n};\n\nreturn [{ json: parsed }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        160,
-        1808
+        -1344,
+        1328
       ],
-      "id": "0f8ee242-29bc-4faf-be55-41001c659204",
+      "id": "ac12275a-ed4c-4e6e-9465-a4062200198f",
       "name": "Claude Call 2"
     },
     {
       "parameters": {
-        "jsCode": "const response = $('Claude Call 2').first().json;\n\nlet rawText = '';\n\nif (response.content && Array.isArray(response.content)) {\n  rawText = response.content\n    .filter(block => block.type === 'text')\n    .map(block => block.text)\n    .join('');\n} else {\n  throw new Error('Claude Call 2: unexpected response shape — no content array');\n}\n\n// Strip markdown fences if present\nrawText = rawText.replace(/^```json\\s*/i, '').replace(/^```\\s*/i, '').replace(/```\\s*$/i, '').trim();\n\nlet parsed;\ntry {\n  parsed = JSON.parse(rawText);\n} catch (e) {\n  throw new Error('Claude Call 2: JSON parse failed — ' + e.message + ' | Raw: ' + rawText.substring(0, 300));\n}\n\nreturn [{ json: parsed }];"
+        "jsCode": "const response = $('groq call2').first().json;\nlet rawText = response.choices[0].message.content;\nrawText = rawText.replace(/^```json\\s*/i, '').replace(/^```\\s*/i, '').replace(/```\\s*$/i, '').trim();\nlet parsed;\ntry {\n  parsed = JSON.parse(rawText);\n} catch (e) {\n  throw new Error('Claude Call 2: JSON parse failed — ' + e.message + ' | Raw: ' + rawText.substring(0, 300));\n}\nreturn [{ json: parsed }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        384,
-        1808
+        -1120,
+        1664
       ],
-      "id": "a119ff8d-78c0-4fea-8efe-1d9ea4ae8824",
+      "id": "3e261c85-6286-43c0-abf8-0c9660eb09cf",
       "name": "Parse Claude Call 2 Response"
     },
     {
@@ -412,10 +412,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        608,
-        1808
+        -896,
+        1664
       ],
-      "id": "19d4bbb5-6a5a-4ef4-9bd9-9c40cefe138e",
+      "id": "4a0419ce-6446-495e-b76e-766b2998aea7",
       "name": "Prepare Simulation JSON Binary"
     },
     {
@@ -427,10 +427,10 @@
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1.1,
       "position": [
-        832,
-        1808
+        -672,
+        1664
       ],
-      "id": "d68d5949-d97d-4cd0-9ade-600ee17067b8",
+      "id": "9fd832bd-54b1-451b-b9ea-16f3d6f355bd",
       "name": "Write Simulation Execution JSON"
     },
     {
@@ -440,10 +440,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1056,
-        1808
+        -1792,
+        2128
       ],
-      "id": "29c214cc-fb8a-4d84-bcdf-445d29703b40",
+      "id": "c4cb8e2c-2416-49c5-bf1f-c2b3d236149b",
       "name": "Build Validation Command"
     },
     {
@@ -453,10 +453,10 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        1280,
-        1808
+        -1568,
+        2128
       ],
-      "id": "5760099d-e5b1-4d57-b3fd-08c88ef66f1d",
+      "id": "2bf1c3dc-16de-4231-80e8-1854d85ac551",
       "name": "Run Schema Validation"
     },
     {
@@ -486,10 +486,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        1488,
-        1808
+        -1360,
+        2128
       ],
-      "id": "6d6b1ba6-5420-43e2-b85a-6a513b1adae5",
+      "id": "a702da32-904f-4de8-b642-2c5ffe406004",
       "name": "Validation Pass check"
     },
     {
@@ -499,23 +499,23 @@
       "type": "n8n-nodes-base.stopAndError",
       "typeVersion": 1,
       "position": [
-        1712,
-        1824
+        -1136,
+        2144
       ],
-      "id": "9a16e389-22f2-4183-9b00-f208fa5508f9",
+      "id": "d7b3c84c-9219-4abe-89bb-33f203037380",
       "name": "Validation Failed"
     },
     {
       "parameters": {
-        "jsCode": "const jobId = $('generate jobID').first().json.jobId;\nconst baseName = $('generate jobID').first().json.baseName;\nconst repoRoot = $('generate jobID').first().json.repoRoot;\nconst intermediatesDir = $('generate jobID').first().json.intermediatesDir;\n\n// cadFile is filename only — build full path manually\nconst cadFile = `C:\\\\pipeline\\\\inputs\\\\cad\\\\${baseName}.obj`;\n\nconst blenderExe = `C:\\\\Program Files\\\\Blender Foundation\\\\Blender 4.5\\\\blender.exe`;\nconst script = `${repoRoot}\\\\scripts\\\\blender_simulate_render.py`;\nconst simJson = `${intermediatesDir}\\\\${jobId}-simulation-execution.json`;\nconst manifest = `${intermediatesDir}\\\\${jobId}-object-manifest.json`;\nconst outDir = `${intermediatesDir}\\\\frames`;\n\nconst blenderSimCmd = `\"${blenderExe}\" --background --python \"${script}\" -- --cad \"${cadFile}\" --simjson \"${simJson}\" --manifest \"${manifest}\" --outdir \"${outDir}\"`;\n\nreturn [{ json: { blenderSimCmd, jobId, intermediatesDir } }];"
+        "jsCode": "const jobId = $('generate jobID').first().json.jobId;\nconst baseName = $('generate jobID').first().json.baseName;\nconst repoRoot = $('generate jobID').first().json.repoRoot;\nconst intermediatesDir = $('generate jobID').first().json.intermediatesDir;\nconst cadFile = `C:\\\\pipeline\\\\inputs\\\\cad\\\\${baseName}.fbx`;\nconst blenderExe = `C:\\\\Program Files\\\\Blender Foundation\\\\Blender 4.5\\\\blender.exe`;\nconst script = `${repoRoot}\\\\scripts\\\\blender_simulate_render.py`;\nconst simJson = `${intermediatesDir}\\\\${jobId}-simulation-execution.json`;\nconst manifest = `${intermediatesDir}\\\\${jobId}-object-manifest.json`;\nconst outDir = `${intermediatesDir}\\\\frames`;\nconst logPath = `C:\\\\pipeline\\\\logs\\\\${jobId}-blender-render.log`;\nconst blenderSimCmd = `cmd /c \"\\\"${blenderExe}\\\" --background --python \\\"${script}\\\" -- --cad \\\"${cadFile}\\\" --simjson \\\"${simJson}\\\" --manifest \\\"${manifest}\\\" --outdir \\\"${outDir}\\\" >> \\\"${logPath}\\\" 2>&1 & echo RENDER_DONE\"`;\nreturn [{ json: { blenderSimCmd, jobId, intermediatesDir } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -288,
-        2272
+        -1792,
+        2560
       ],
-      "id": "99ddc2ab-a1bc-450c-8196-dfc9aea3cc71",
+      "id": "3f25fb4f-b2ed-40f1-8612-61d5d1dc4e1b",
       "name": "Build Blender Simulate Command"
     },
     {
@@ -525,10 +525,10 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        -64,
-        2272
+        -1568,
+        2560
       ],
-      "id": "f804f703-1567-4a6a-8689-afe636f2d168",
+      "id": "3ff9db56-082a-4ddb-aaa3-39dd6b513e14",
       "name": "Run Blender Simulation + Render"
     },
     {
@@ -538,10 +538,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -288,
-        2720
+        -1792,
+        3008
       ],
-      "id": "9f6b1e2b-7013-414c-9114-f3c00445ed48",
+      "id": "9f47f18b-7ec6-4963-b12d-3a3e4c776d45",
       "name": "Build FFmpeg Command"
     },
     {
@@ -551,10 +551,10 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        -64,
-        2720
+        -1568,
+        3008
       ],
-      "id": "98bd8d9b-ff78-406c-aaec-e15a56c15282",
+      "id": "395f73e4-03d5-41e9-9f70-99b403917a61",
       "name": "Assemble Video"
     },
     {
@@ -564,10 +564,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -288,
-        3152
+        -1792,
+        3440
       ],
-      "id": "77e0eedb-914d-4be1-91f5-4a07a7487a1c",
+      "id": "088343f9-96c7-46ae-861d-efaf15f79505",
       "name": "Build Completion Report"
     },
     {
@@ -579,10 +579,10 @@
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1.1,
       "position": [
-        160,
-        3152
+        -1344,
+        3440
       ],
-      "id": "d8f789ad-ff16-43fb-8403-4a2325655293",
+      "id": "eb2bda44-9024-4c5f-ac39-6f790f167b62",
       "name": "Write Completion Report"
     },
     {
@@ -592,10 +592,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -64,
-        3152
+        -1568,
+        3440
       ],
-      "id": "670e25bb-6830-4603-a39d-1c46cbacc2b1",
+      "id": "b2473d8f-2621-4255-8691-a72007e52c35",
       "name": "Prepare Report Binary"
     },
     {
@@ -605,11 +605,63 @@
       "type": "n8n-nodes-base.stopAndError",
       "typeVersion": 1,
       "position": [
-        368,
-        3152
+        -1136,
+        3440
       ],
-      "id": "ee47990c-880f-43cb-8487-76b99b1ad4b8",
+      "id": "1b9c92d5-b637-4a2f-93f6-9aa493730b52",
       "name": "Stop and Error"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"llama-3.3-70b-versatile\",\"messages\":[{\"role\":\"user\",\"content\":\"Return ONLY this exact JSON, no other text: {\\\"test\\\":\\\"ok\\\"}\"}],\"max_tokens\":100}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1344,
+        688
+      ],
+      "id": "ffea7127-b3dd-4ae4-aaa6-af6c1b20c470",
+      "name": "groq call1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "b1JfDwkNLVZZzNN9",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"llama-3.3-70b-versatile\",\"messages\":[{\"role\":\"user\",\"content\":\"Return ONLY this exact JSON, no other text: {\\\"test\\\":\\\"ok2\\\"}\"}],\"max_tokens\":100}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1344,
+        1664
+      ],
+      "id": "1ba8a40c-6510-4147-a80b-6be9bdaac469",
+      "name": "groq call2",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "b1JfDwkNLVZZzNN9",
+          "name": "Header Auth account"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -751,13 +803,7 @@
     },
     "Parse Claude Call 1 Response": {
       "main": [
-        [
-          {
-            "node": "Prepare Procedural JSON Binary",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     },
     "Prepare Procedural JSON Binary": {
@@ -765,17 +811,6 @@
         [
           {
             "node": "Write Procedural JSON",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Claude Call 1": {
-      "main": [
-        [
-          {
-            "node": "Parse Claude Call 1 Response",
             "type": "main",
             "index": 0
           }
@@ -826,32 +861,11 @@
         ]
       ]
     },
-    "Claude Call #1": {
-      "main": [
-        []
-      ]
-    },
-    "Claude Call #2": {
-      "main": [
-        []
-      ]
-    },
     "Build Phase 4 Prompt": {
       "main": [
         [
           {
-            "node": "Claude Call 2",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Claude Call 2": {
-      "main": [
-        [
-          {
-            "node": "Parse Claude Call 2 Response",
+            "node": "groq call2",
             "type": "main",
             "index": 0
           }
@@ -1007,6 +1021,39 @@
           }
         ]
       ]
+    },
+    "groq call1": {
+      "main": [
+        [
+          {
+            "node": "Parse Claude Call 1 Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "groq call2": {
+      "main": [
+        [
+          {
+            "node": "Parse Claude Call 2 Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Call 1": {
+      "main": [
+        [
+          {
+            "node": "Prepare Procedural JSON Binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
@@ -1015,11 +1062,11 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "9e597a83-7b19-4281-b570-027cb55122b4",
+  "versionId": "cb0d4735-cb8c-45df-bf41-4a09960df580",
   "meta": {
     "instanceId": "26aec703d4ef38ac4e911caf870148d44cf371b3b58793422bf8af1f68ed0daf"
   },
   "nodeGroups": [],
-  "id": "yclIKSy4QxFTdntr",
+  "id": "kz0g5cuyCzaXKiTm",
   "tags": []
 }
