@@ -276,13 +276,13 @@ def configure_render(outdir, frame_rate):
             print("[Phase 6] WARNING: GPU unavailable — falling back to CPU.", file=sys.stderr)
 
     # Resolution (4K)
-    scene.render.resolution_x          = 3840
-    scene.render.resolution_y          = 2160
+    scene.render.resolution_x          = 960
+    scene.render.resolution_y          = 540
     scene.render.resolution_percentage = 100
     scene.render.fps                   = frame_rate
 
     # Samples + adaptive sampling
-    scene.cycles.samples               = 512
+    scene.cycles.samples               = 32
     scene.cycles.use_adaptive_sampling = True
     scene.cycles.adaptive_threshold    = 0.01
 
