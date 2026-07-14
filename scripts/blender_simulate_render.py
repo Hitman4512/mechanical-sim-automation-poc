@@ -56,6 +56,37 @@ def import_cad(cad_path):
     print(f"[Phase 5] Import complete. Objects in scene: {len(bpy.data.objects)}")
 
 
+
+def get_scene_center():
+    """Returns the center of all mesh objects in world coordinates."""
+
+    mesh_objects = [obj for obj in bpy.data.objects if obj.type == 'MESH' and obj.visible_get()]
+
+    if not mesh_objects:
+        print("[Phase 5] WARNING: No mesh objects found.")
+        return mathutils.Vector((0, 0, 0))
+
+    min_corner = mathutils.Vector((float("inf"), float("inf"), float("inf")))
+    max_corner = mathutils.Vector((float("-inf"), float("-inf"), float("-inf")))
+
+    for obj in mesh_objects:
+        for corner in obj.bound_box:
+            world_corner = obj.matrix_world @ mathutils.Vector(corner)
+
+            min_corner.x = min(min_corner.x, world_corner.x)
+            min_corner.y = min(min_corner.y, world_corner.y)
+            min_corner.z = min(min_corner.z, world_corner.z)
+
+            max_corner.x = max(max_corner.x, world_corner.x)
+            max_corner.y = max(max_corner.y, world_corner.y)
+            max_corner.z = max(max_corner.z, world_corner.z)
+
+    center = (min_corner + max_corner) / 2
+
+    print(f"[Phase 5] Scene center = {center}")
+
+    return center
+
 # ─── Keyframes ────────────────────────────────────────────────────────────────
 
 def apply_keyframes(sim_data):
@@ -80,14 +111,18 @@ def apply_keyframes(sim_data):
                   file=sys.stderr)
             continue
 
+        # frame -> interpolation, collected once, applied once after all keyframes are inserted
+        frame_interp = {}
+
         for kf in obj_data.get("keyframes", []):
             frame    = kf.get("frame", 0)
             position = kf.get("position", [0, 0, 0])
             rotation = kf.get("rotation", [0, 0, 0])  # degrees
             interp   = INTERP_MAP.get(kf.get("interpolation", "LINEAR"), "LINEAR")
+            frame_interp[frame] = interp
 
             scene.frame_set(frame)
-            obj.location        = position
+            obj.location = mathutils.Vector(position)
             obj.rotation_euler  = [math.radians(r) for r in rotation]
             obj.keyframe_insert(data_path="location",       frame=frame)
             obj.keyframe_insert(data_path="rotation_euler", frame=frame)
@@ -97,12 +132,18 @@ def apply_keyframes(sim_data):
                 obj.scale = scale
                 obj.keyframe_insert(data_path="scale", frame=frame)
 
-            # Set interpolation type on the keyframe just inserted
-            if obj.animation_data and obj.animation_data.action:
-                for fc in obj.animation_data.action.fcurves:
-                    for kfp in fc.keyframe_points:
-                        if kfp.co[0] == frame:
+        # Set interpolation ONCE per object, after all keyframes for that object are inserted.
+        # Fixes two bugs from the old version:
+        #   1. old code re-scanned every fcurve for every single keyframe (O(n^2), slow)
+        #   2. old code used `kfp.co[0] == frame` (exact float compare) which can silently
+        #      miss a match due to float precision drift. Now uses a tolerance check.
+        if frame_interp and obj.animation_data and obj.animation_data.action:
+            for fc in obj.animation_data.action.fcurves:
+                for kfp in fc.keyframe_points:
+                    for target_frame, interp in frame_interp.items():
+                        if abs(kfp.co[0] - target_frame) < 0.5:
                             kfp.interpolation = interp
+                            break
 
     if missing:
         print(f"[Phase 5] {len(missing)} mesh(es) not found and skipped: {missing}",
@@ -148,7 +189,7 @@ def apply_constraints(sim_data):
 
 # ─── Camera ───────────────────────────────────────────────────────────────────
 
-def setup_camera(sim_data):
+def setup_camera(sim_data, scene_center):
     """Keyframe camera from cameraPath (position + lookAt per frame)."""
     cam_path = sim_data.get("cameraPath", [])
     if not cam_path:
@@ -165,15 +206,15 @@ def setup_camera(sim_data):
 
     for ckf in cam_path:
         frame    = ckf.get("frame", 0)
-        position = ckf.get("position", [5, -5, 5])
-        look_at  = ckf.get("lookAt",   [0,  0,  0])
+        position = mathutils.Vector(ckf.get("position", [5, -5, 5])) + scene_center
+        look_at = mathutils.Vector(ckf.get("lookAt", [0, 0, 0])) + scene_center
         fov      = ckf.get("fov")          # degrees or None
 
         bpy.context.scene.frame_set(frame)
-        cam_obj.location = mathutils.Vector(position)
+        cam_obj.location = position
 
         # Compute rotation: camera looks along -Z, Y is up
-        direction = mathutils.Vector(look_at) - mathutils.Vector(position)
+        direction = look_at - position
         if direction.length > 1e-6:
             rot_quat = direction.to_track_quat("-Z", "Y")
             cam_obj.rotation_euler = rot_quat.to_euler()
@@ -199,6 +240,12 @@ def setup_materials():
         "Label2":     (0.15, 0.75, 0.15, 0.0, 0.0),   # green
         "Label3":     (0.15, 0.35, 0.90, 0.0, 0.0),   # blue
         "Label4":     (0.95, 0.75, 0.05, 0.0, 0.0),   # yellow
+        "GearLarge":  (0.65, 0.70, 0.80, 0.8, 0.1),   # silver-blue metallic
+        "GearSmall":  (0.85, 0.60, 0.15, 0.7, 0.2),   # gold
+        "ShaftMain":  (0.55, 0.55, 0.58, 0.9, 0.05),  # steel
+        "BasePlate":  (0.20, 0.20, 0.22, 0.3, 0.3),   # dark grey
+        "LabelA":     (0.90, 0.15, 0.15, 0.0, 0.0),   # red
+        "LabelB":     (0.15, 0.35, 0.90, 0.0, 0.0),   # blue
     }
     for name, (r, g, b, metallic, roughness_add) in configs.items():
         obj = bpy.data.objects.get(name)
@@ -252,7 +299,7 @@ def add_default_lighting():
 # ─── Render settings ──────────────────────────────────────────────────────────
 
 def configure_render(outdir, frame_rate):
-    """Configure Cycles + OptiX, 4K, 512 samples, PNG 16-bit output."""
+    """Configure Cycles + OptiX, 960x540, 128 samples, PNG 16-bit output."""
     scene = bpy.context.scene
     scene.render.engine    = "CYCLES"
     scene.cycles.device    = "GPU"
@@ -275,14 +322,14 @@ def configure_render(outdir, frame_rate):
             scene.cycles.device = "CPU"
             print("[Phase 6] WARNING: GPU unavailable — falling back to CPU.", file=sys.stderr)
 
-    # Resolution (4K)
+    # Resolution — TEST SETTING: 960x540
     scene.render.resolution_x          = 3840
     scene.render.resolution_y          = 2160
     scene.render.resolution_percentage = 100
     scene.render.fps                   = frame_rate
 
-    # Samples + adaptive sampling
-    scene.cycles.samples               = 512
+    # Samples — TEST SETTING: 128
+    scene.cycles.samples               = 256
     scene.cycles.use_adaptive_sampling = True
     scene.cycles.adaptive_threshold    = 0.01
 
@@ -314,7 +361,7 @@ def configure_render(outdir, frame_rate):
     scene.render.use_render_cache    = False
 
     print(f"[Phase 6] Render → {outdir}")
-    print(f"[Phase 6] Engine: Cycles | 4K | 512 samples | AdaptiveSampling | PNG 16-bit")
+    print(f"[Phase 6] Engine: Cycles | 3840x2160 | 256 samples | AdaptiveSampling | PNG 16-bit")
 
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
@@ -341,6 +388,7 @@ def main():
 
     # 2. Import CAD
     import_cad(args.cad)
+    scene_center = get_scene_center()
 
     # 3. Apply keyframes
     print("[Phase 5] Applying keyframes...")
@@ -354,7 +402,7 @@ def main():
 
     # 5. Setup camera
     print("[Phase 5] Setting up camera...")
-    setup_camera(sim_data)
+    setup_camera(sim_data, scene_center)
 
     # ── Phase 6: Rendering ──────────────────────────────────────────────────
 

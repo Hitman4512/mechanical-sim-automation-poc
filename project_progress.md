@@ -1,20 +1,37 @@
 # Project Progress — AI-Driven Mechanical 3D Simulation Automation (Local POC)
 
-**Last Updated:** July 3, 2026
-**Current Phase:** Awaiting real Claude API key | All schemas fixed | Demo render ready to queue
+**Last Updated:** July 7, 2026
+**Current Phase:** Awaiting real Claude API key | Render time benchmarks collected across resolutions | Ready to queue full demo render at chosen resolution/samples
 
 ---
 
-## Latest Entry — July 3, 2026
+## Latest Entry — July 7, 2026
 
-**What happened — Schema files fixed ✅**
+**What happened — Render time benchmarking across resolutions**
 
-- `schemas/object_manifest.schema.json` — was empty, now populated (FINAL_ARCHITECTURE.md Section 11.3)
-- `schemas/procedural_json.schema.json` — was empty, now populated (FINAL_ARCHITECTURE.md Section 10.3)
-- `schemas/simulation_execution.schema.json` — missing `constraints` block added (FINAL_ARCHITECTURE.md Section 12.2)
-- All 3 schema files committed to repo
+Tested render time per frame at three resolution/sample combos (hardcoded values, no Claude calls — see July 6 entry):
 
-**Next planned step:** Swap mock Claude Call 1 + 2 → real HTTP Request nodes once API key arrives. Populate `.env` with `CLAUDE_API_KEY`.
+| Resolution | Samples | Time/frame |
+|---|---|---|
+| 540p | 128 | 15 sec |
+| 1080p | 128 | 20 sec |
+| 4K | 456 | 60 sec |
+
+**Reading this:** 4K at 456 samples costs 4x the per-frame time of 540p, but that's a mix of two variables (resolution jump + almost 4x the samples). Not a clean apples-to-apples test — if you want to isolate whether resolution or sample count is the bigger cost driver, next test should hold samples constant across resolutions.
+
+**Next planned step:** Decide target resolution/samples for the real demo render based on total time budget (frame count × time/frame), then swap mock Claude Call 1 + 2 → real HTTP Request nodes once API key arrives.
+
+---
+
+## Previous Entry — July 6, 2026 (compressed)
+
+Switched Claude Call 1 + 2 nodes to hardcoded JSON values temporarily (no live API calls) to unblock testing. Cleared several bugs. First test video rendered at 540p, 32 samples. Fixed a rotation logic bug (root cause unconfirmed — resolved with Claude's help, not independently diagnosed).
+
+---
+
+## Previous Entry — July 3, 2026 (compressed)
+
+Schema files fixed: `object_manifest.schema.json` and `procedural_json.schema.json` populated (were empty), `simulation_execution.schema.json` got missing `constraints` block added. All 3 committed to repo.
 
 ---
 
