@@ -56,15 +56,14 @@ def import_cad(cad_path):
     print(f"[Phase 5] Import complete. Objects in scene: {len(bpy.data.objects)}")
 
 
-
-def get_scene_center():
-    """Returns the center of all mesh objects in world coordinates."""
-
+def get_scene_bounds():
+    """Returns (center, radius) — radius is the distance from center to the
+    farthest bounding-box corner, so a sphere of this radius fully contains the model."""
     mesh_objects = [obj for obj in bpy.data.objects if obj.type == 'MESH' and obj.visible_get()]
 
     if not mesh_objects:
         print("[Phase 5] WARNING: No mesh objects found.")
-        return mathutils.Vector((0, 0, 0))
+        return mathutils.Vector((0, 0, 0)), 10.0
 
     min_corner = mathutils.Vector((float("inf"), float("inf"), float("inf")))
     max_corner = mathutils.Vector((float("-inf"), float("-inf"), float("-inf")))
@@ -72,20 +71,19 @@ def get_scene_center():
     for obj in mesh_objects:
         for corner in obj.bound_box:
             world_corner = obj.matrix_world @ mathutils.Vector(corner)
-
             min_corner.x = min(min_corner.x, world_corner.x)
             min_corner.y = min(min_corner.y, world_corner.y)
             min_corner.z = min(min_corner.z, world_corner.z)
-
             max_corner.x = max(max_corner.x, world_corner.x)
             max_corner.y = max(max_corner.y, world_corner.y)
             max_corner.z = max(max_corner.z, world_corner.z)
 
     center = (min_corner + max_corner) / 2
+    radius = (max_corner - min_corner).length / 2
 
-    print(f"[Phase 5] Scene center = {center}")
+    print(f"[Phase 5] Scene center = {center}, bounding radius = {radius:.2f}")
+    return center, radius
 
-    return center
 
 # ─── Keyframes ────────────────────────────────────────────────────────────────
 
@@ -122,7 +120,7 @@ def apply_keyframes(sim_data):
             frame_interp[frame] = interp
 
             scene.frame_set(frame)
-            obj.location = mathutils.Vector(position)
+            obj.location        = mathutils.Vector(position)
             obj.rotation_euler  = [math.radians(r) for r in rotation]
             obj.keyframe_insert(data_path="location",       frame=frame)
             obj.keyframe_insert(data_path="rotation_euler", frame=frame)
@@ -189,12 +187,43 @@ def apply_constraints(sim_data):
 
 # ─── Camera ───────────────────────────────────────────────────────────────────
 
-def setup_camera(sim_data, scene_center):
-    """Keyframe camera from cameraPath (position + lookAt per frame)."""
+def setup_camera(sim_data, scene_center, scene_radius, manifest_data=None, safety_margin=1.6):
+    """
+    Keyframe camera from cameraPath (position + lookAt per frame).
+
+    If the Object Manifest is available, compute the radius Claude *should* have
+    seen when writing cameraPath, and only correct for the gap between that and
+    the real measured radius — plus a small safety margin. This avoids double-
+    scaling correct Claude output while still catching genuinely wrong output.
+
+    While manifest_data is None (current hardcoded/mock testing), this falls back
+    to treating scene_radius as already-correct, applying only the safety margin.
+    """
     cam_path = sim_data.get("cameraPath", [])
     if not cam_path:
         print("[Phase 5] WARNING: no cameraPath — using default camera.", file=sys.stderr)
         return
+
+    # Figure out what radius Claude was working from, if we have manifest data
+    claude_known_radius = scene_radius  # fallback: assume Claude already got it right
+    if manifest_data:
+        meshes = manifest_data.get("meshes", [])
+        if meshes:
+            mins = [m["boundingBox"]["min"] for m in meshes if "boundingBox" in m]
+            maxs = [m["boundingBox"]["max"] for m in meshes if "boundingBox" in m]
+            if mins and maxs:
+                combined_min = [min(v[i] for v in mins) for i in range(3)]
+                combined_max = [max(v[i] for v in maxs) for i in range(3)]
+                extent = mathutils.Vector(combined_max) - mathutils.Vector(combined_min)
+                claude_known_radius = extent.length / 2
+
+    # Only correct the ratio between what Claude *should* have known and reality,
+    # not an arbitrary hardcoded guess. If Claude's math was right, this is ~1.0.
+    correction = (scene_radius / claude_known_radius) if claude_known_radius > 1e-6 else 1.0
+    scale = correction * safety_margin
+
+    print(f"[Phase 5] Camera scale factor = {scale:.3f} "
+          f"(correction={correction:.3f}, safety_margin={safety_margin})")
 
     # Ensure a camera object exists
     cam_data = bpy.data.cameras.get("SimCamera") or bpy.data.cameras.new("SimCamera")
@@ -205,10 +234,16 @@ def setup_camera(sim_data, scene_center):
     bpy.context.scene.camera = cam_obj
 
     for ckf in cam_path:
-        frame    = ckf.get("frame", 0)
-        position = mathutils.Vector(ckf.get("position", [5, -5, 5])) + scene_center
-        look_at = mathutils.Vector(ckf.get("lookAt", [0, 0, 0])) + scene_center
-        fov      = ckf.get("fov")          # degrees or None
+        frame        = ckf.get("frame", 0)
+        raw_position = mathutils.Vector(ckf.get("position", [5, -5, 5]))
+        raw_lookat   = mathutils.Vector(ckf.get("lookAt",   [0, 0, 0]))
+        fov          = ckf.get("fov")          # degrees or None
+
+        # Scale the position vector (relative to model center) by the size ratio,
+        # then offset by the model's real center. lookAt is only offset, not scaled,
+        # so it stays anchored near the model's true middle regardless of camera distance.
+        position = raw_position * scale + scene_center
+        look_at  = raw_lookat + scene_center
 
         bpy.context.scene.frame_set(frame)
         cam_obj.location = position
@@ -299,7 +334,7 @@ def add_default_lighting():
 # ─── Render settings ──────────────────────────────────────────────────────────
 
 def configure_render(outdir, frame_rate):
-    """Configure Cycles + OptiX, 960x540, 128 samples, PNG 16-bit output."""
+    """Configure Cycles + OptiX, 3840x2160, 256 samples, PNG 16-bit output."""
     scene = bpy.context.scene
     scene.render.engine    = "CYCLES"
     scene.cycles.device    = "GPU"
@@ -322,14 +357,14 @@ def configure_render(outdir, frame_rate):
             scene.cycles.device = "CPU"
             print("[Phase 6] WARNING: GPU unavailable — falling back to CPU.", file=sys.stderr)
 
-    # Resolution — TEST SETTING: 960x540
-    scene.render.resolution_x          = 3840
-    scene.render.resolution_y          = 2160
+    # Resolution — TEST SETTING: 568x320
+    scene.render.resolution_x          = 426
+    scene.render.resolution_y          = 240
     scene.render.resolution_percentage = 100
     scene.render.fps                   = frame_rate
 
-    # Samples — TEST SETTING: 128
-    scene.cycles.samples               = 256
+    # Samples — TEST SETTING: 256
+    scene.cycles.samples               = 128
     scene.cycles.use_adaptive_sampling = True
     scene.cycles.adaptive_threshold    = 0.01
 
@@ -361,7 +396,7 @@ def configure_render(outdir, frame_rate):
     scene.render.use_render_cache    = False
 
     print(f"[Phase 6] Render → {outdir}")
-    print(f"[Phase 6] Engine: Cycles | 3840x2160 | 256 samples | AdaptiveSampling | PNG 16-bit")
+    print(f"[Phase 6] Engine: Cycles | 426x240 | 128 samples | AdaptiveSampling | PNG 16-bit")
 
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
@@ -378,6 +413,17 @@ def main():
     with open(args.simjson, "r", encoding="utf-8") as f:
         sim_data = json.load(f)
 
+    # Load manifest JSON — used only for the camera-scale correction logic in
+    # setup_camera(). Not required to exist for the script to still run; if it's
+    # missing or unreadable, we fall back to treating scene_radius as correct.
+    manifest_data = None
+    try:
+        with open(args.manifest, "r", encoding="utf-8") as f:
+            manifest_data = json.load(f)
+    except Exception as e:
+        print(f"[Phase 5] WARNING: could not read manifest for camera scaling: {e}",
+              file=sys.stderr)
+
     frame_rate   = sim_data.get("frameRate", 24)
     total_frames = sim_data.get("totalFrames", 240)
 
@@ -388,7 +434,7 @@ def main():
 
     # 2. Import CAD
     import_cad(args.cad)
-    scene_center = get_scene_center()
+    scene_center, scene_radius = get_scene_bounds()
 
     # 3. Apply keyframes
     print("[Phase 5] Applying keyframes...")
@@ -402,7 +448,12 @@ def main():
 
     # 5. Setup camera
     print("[Phase 5] Setting up camera...")
-    setup_camera(sim_data, scene_center)
+    # NOTE: manifest_data is currently not being used for scaling correction
+    # while we're on hardcoded/mock Claude Call 2 output — passing None here
+    # keeps behavior as "treat scene_radius as already correct, apply only the
+    # safety margin." Once real Claude Call 2 is wired in, pass manifest_data
+    # through so the correction logic activates properly.
+    setup_camera(sim_data, scene_center, scene_radius, manifest_data=None)
 
     # ── Phase 6: Rendering ──────────────────────────────────────────────────
 
